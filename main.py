@@ -19,7 +19,14 @@ import sys
 import os
 #for the response from the BOX APIS
 import json
-
+#for hashing files for delete and download checking
+import sha
+#should convert all internet communication to pycurl
+import pycurl
+#used to read from pycurl (saw in tut on sourceforge)
+import StringIO
+##helper methods!
+import helper
 
 
 #do globals have to be declared outside of methods?
@@ -69,7 +76,7 @@ def main():
 def loop():
 	global rootxml
 	rootxml = get_folder_list()
-	print("	0. Go To Download options")
+	print("	0. Download")
 	print("\t1. Change Directory")
 	print("\t2. Upload File")
 	print("\t3. Delete File")
@@ -300,14 +307,24 @@ def command_check(rawinput):
 	if rawinput=='Q' or rawinput=='q':
 		return True
 		
+		
+#says here that the sha1sum is optional for upload!
 def upload():
 	print "Upload method placeholder"
+	f = open('testfile', 'r')
+	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
+	data = {'filename1' : 'testfile', 'folder_id' : '0'}
+	request = urllib2.Request("https://api.box.com/2.0/files/content", data, headers)
+	#request.add_data(f.read())
+	response = urllib2.urlopen(request)
+	print(response.read())
 	
 def uploadchoices():
 	print "Uploadchoices method placeholder"
 		
 def test():
 	print_file_list(-1)
+	list_local_files()
 	getfileurl(0)
 	
 	
@@ -350,6 +367,7 @@ def shellhelper():
 ##the sha1sum is given in the <etag> in the xml folder listing
 def deletefilechoice():
 	print "deletefilechoice place holder"
+	print_file_list()
 	
 def deletefile():
 	print "Deletefile place holder"
@@ -371,19 +389,56 @@ def fileurlchoices():
 
 ##right now this returns 400 bad request error code
 ##BUT I KNOW I'M CLOSE!
-##it might have to do with the httplib and the https
 ##it def has to do with the Content Lenght thingy
 def getfileurl(fileid):
 	fileid = str(fileid)
-	headers = {'Content-length' : '0', 'Content-Type' : 'application/json', 'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,} #'shared_link' : {'access' : 'Open'},}
-	data = {'shared_link' : {'access' : 'Open'}}
-	data = urllib.urlencode(data)
-	conn = httplib.HTTPSConnection('api.box.com')
-	conn.request('PUT', '/2.0/files/'+fileid, data, headers)
-	##.read() turns it from object to text
-	response = conn.getresponse().read()
-	print response
-		
+	f = open('link_access', 'r')
+	filesize = str(os.path.getsize('link_access'))
+	c = pycurl.Curl()
+	c.setopt(pycurl.URL, "https://api.box.com/2.0/files/"+fileid)
+	c.setopt(pycurl.HTTPHEADER, ['Authorization: BoxAuth api_key='+apikey+'&auth_token='+auth_token])
+	#c.setopt(pycurl.HTTPHEADER, ['Content-Length: 30'
+	c.setopt(pycurl.UPLOAD, 1)
+	c.setopt(pycurl.READFUNCTION, f.read)
+	c.setopt(pycurl.INFILESIZE, int(filesize))
+	#c.setopt(pycurl.HTTPPOST, [('shared_link', '{access: Open}')])
+	reader = StringIO.StringIO()
+	c.setopt(pycurl.WRITEFUNCTION, reader.write)
+	c.perform()
+	print reader.getvalue()
+	
+	
+def get_sha1sum():
+	f = open('testfile', 'r')
+	string = f.read()
+	#must be string or buffer not file
+	sha1sum = sha.new(string)
+	#print(sha1sum.hexdigest())
+	return sha1sum.hexdigest()
+	
+def list_local_files():
+	print(os.listdir(os.getcwd()))
+	
+	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
 ##########!!!!!!!!!!!!!!!!!!!!
 #don't put anything below this; python will stop loading stuff once it gets to this!
 if __name__ == '__main__':
