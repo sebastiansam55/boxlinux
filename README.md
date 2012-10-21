@@ -7,15 +7,15 @@ Bringing Box to the Linux desktop
 
 To use this tool (in it's current state) add it into your BIN, I recommend making a bin folder in your home dir and adding that to your $PATH. I'd also rename the *main.py* file to boxlinux, which is what it will eventually be.
 Current Capabities:
-	+ Authentication (through BOX v1 API)
-	+ Interactive mode
-	+ Command line mode (great for scripting)
-	+ Upload (to root dir)
-	+ Download (from any folder)
-		+ Download all files in folder!
-	+ Listing all files in root dir and other dirs (on box)
-	+ Create shareable links for files
-	+ Saves settings to ~/.boxlinux (only setting atm is the auth token from BOX's API)
+	+Authentication (through BOX v1 API)
+	+Interactive mode
+	+Command line mode (great for scripting)
+	+Upload (to root dir)
+	+Download (from any folder)
+		+Download all files in folder!
+	+Listing all files in root dir and other dirs (on box)
+	+Create shareable links for files
+	+Saves settings to ~/.boxlinux (only setting atm is the auth token from BOX's API)
 	
 Planned Features:
 	+ Automatic "Syncing"
