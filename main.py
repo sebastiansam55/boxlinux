@@ -77,9 +77,11 @@ def loop():
 	print("\t3. Delete File")
 	print("\t4. Delete Folder")
 	print("\t5. Make URL for File")
-	print("\t6. Upload File")
-	print("\t7. Make a new Folder")
-	print("\t8. Make URL for Folder")
+	print("\t6. Make URL for Folder")
+	print("\t7. Remove URL for File")
+	print("\t8. Remove URL for Folder")
+	print("\t9. Make a new Folder")
+	print("\t10. List Files in Current Dir") 
 	print("\t-1. Test Method")
 	#rawinput should be int
 	#int() is a lifesaver!
@@ -100,11 +102,15 @@ def loop():
 	elif rawinput==5:
 		fileurlchoices()		
 	elif rawinput==6:
-		uploadchoices()
+		folder_url_choices()
 	elif rawinput==7:
-		new_folder_choices()
+		rm_share_url_file_choices()
 	elif rawinput==8:
-		folder_url_choices()		
+		rm_share_url_folder_choices()		
+	elif rawinput==9:
+		new_folder_choices()
+	elif rawinput==10:
+		ls()
 	elif rawinput==-1:
 		test()
 	else:
@@ -145,11 +151,7 @@ def save_auth_token():
 	#the ~/ DOES NOT WORK, should substutie something else like a $USER
 	f = open('/home/sam/.boxlinux', 'w')
 	f.write(auth_token)
-	f.close()	
-	
-	
-def firstrun():
-	return os.path.exists('~/.boxlinux')
+	f.close()
 	
 	
 def get_auth_token():
@@ -190,25 +192,26 @@ def print_folder_list(itemcnt):
 	#this will be BIG method!
 	#how will this work as a daemon??
 	dom = parseString(get_folder_list())
-	varprint(dom.getElementsByTagName('folder')[1].toxml())
 	#number of items in the folder
 	#should this be in it's own method?
 	#the two .replace-s should be in their own method!
-	noofitems = dom.getElementsByTagName('total-count')[0].toxml().replace('<total-count>', '').replace('</total-count>', '')
 	i=0
 	bol = True
-	varprint(bol)
 	#maybe but in another method and then have a while true with return?
 	print("FOLDERS:")
 	while bol:
 		#folder 0 is root in the XML
 		try:
 			nameoffolder = dom.getElementsByTagName('folder')[i].getElementsByTagName('name')[0].toxml().replace('<name>', '').replace('</name>', '')
-			#varprint(nameoffolder)
 			folderid = dom.getElementsByTagName('folder')[i].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
-			#varprint(folderid)
+			dom_of_folder = parseString(get_info_file(folderid))
+			try:
+				dom_of_folder.getElementsByTagName('shared-link')
+				sharebool = True
+			except:
+				sharebool = False
 			i=i+1
-			print(str(itemcnt)+" "+nameoffolder + " ("+folderid+")")
+			print(str(itemcnt)+" "+nameoffolder +" Shared: "+str(sharebool)+" ("+folderid+")")
 			itemcnt = itemcnt+1
 		except:
 			bol = False	
@@ -220,20 +223,24 @@ def print_file_list(itemcnt):
 	dom = parseString(rootxml)		
 	print("############################")
 	print("FILES: ")
+	sharebool = False
 	bol = True
 	i=0
 	while bol:
 		try:
-			nameofitem = dom.getElementsByTagName('file')[i].getElementsByTagName('name')[0].toxml().replace('<name>', '').replace('</name>', '')
+			nameofitem = dom.getElementsByTagName('file')[i].getElementsByTagName('name')[0].toxml().replace('<name>', '').replace('</name>', '')		
 			fileid = dom.getElementsByTagName('file')[i].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
-			shared = dom.getElementsByTagName('shared_link')[i].toxml().replace('<shared_link>', '').replace('</shared_link>', '')
-			print shared
-			#if shared==
+			dom_of_file = parseString(get_info_file(fileid))
+			try:
+				dom_of_file.getElementsByTagName('shared-link')
+				sharebool = True
+			except:
+				sharebool = False
 			i=i+1
 			itemcnt = itemcnt+1
-			print(str(itemcnt)+" "+nameofitem+"Shared: "+sharebool+" ("+fileid+")")
+			print(str(itemcnt)+" "+nameofitem+" Shared: "+str(sharebool)+" ("+fileid+")")
 		except:
-			print("End of Items!")
+			print("End of Items! On the "+str(itemcnt))
 			bol=False
 	
 def downloadchoices():
@@ -420,6 +427,7 @@ def uploadchoices():
 		i=i+1
 	rawinput = raw_input("What file do you want to upload?")
 	upload(os.getcwd()+"/"+files[int(rawinput)+1], files[int(rawinput)], 0)
+	loop()
 
 def deletefilechoice():
 	print_file_list(-1)
@@ -504,6 +512,7 @@ def new_folder_choices():
 	newfoldername = raw_input("Name for new folder:")
 	parentfolder = raw_input("Parent Folder (0) for root")
 	mk_new_folder(newfoldername, get_folder_id(parentfolder))
+	loop()
 	
 def folder_url_choices():
 	print_folder_list(0)
@@ -511,6 +520,7 @@ def folder_url_choices():
 	urls = get_folder_url(get_folder_id(folderid))
 	print("Download URL: "+urls[0])
 	print("Direct(?) Download URL: "+urls[1]+ " (Pro account might be required)" )
+	loop()
 	
 ## this will return url plus list of all files in the folder
 ## there's a download-url too (i thought that that was only for premium or pro i'm not sure which one it is)
@@ -531,13 +541,27 @@ def rm_share_url_folder(folderid):
 	payload = {'shared_link': None}
 	print payload
 	r = requests.request("PUT", url, None, json.dumps(payload), headers)
-	print r.content
+	return r.content
 	
 def rm_share_url_folder_choices():
-	##get list of shared folders...
 	print_folder_list(0)
 	rawinput = raw_input("Which folder to unshare?")
 	rm_share_url_folder(get_folder_id(rawinput))
+	loop()
+	
+def rm_share_url_file_choices():
+	print_file_list(0)
+	rawinput = raw_input("Which file to unshare?")
+	rm_share_url_file(get_file_id(rawinput))
+	loop()
+	
+def rm_share_url_file(fileid):
+	url = "https://api.box.com/2.0/files/"+fileid
+	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
+	payload = {'shared_link': None}
+	print payload
+	r = requests.request("PUT", url, None, json.dumps(payload), headers)
+	return r.content
 	
 	
 def get_folder_name(fileid):
@@ -560,9 +584,50 @@ def get_folder_name(fileid):
 
 ########################################################################
 ############################WORKING METHODS#############################
-#not a complete list... just methods that I know I don't need to change or worry about
-#I would say that much of the programs work thank you very much
+#See description of helper methods
+#exactly the same except these are mostly mission critical
+	
+def download_all(file_list):
+	for i in file_list:
+		varprint(file_list[i])
+		download_fileid(file_list[i])
+		
+def get_info_folder(folderid):
+	url = "https://api.box.com/2.0/folders/"+folderid+".xml"
+	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
+	r = requests.request("GET", url, None, None, headers)
+	print r.content
+	
+def get_info_file(fileid):
+	url = "https://api.box.com/2.0/files/"+fileid+".xml"
+	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
+	r = requests.request("GET", url, None, None, headers)
+	return r.content
+	
+def ls():
+	print_file_list(print_folder_list(0))
+	loop()
+	
+def firstrun():
+	return os.path.exists('~/.boxlinux')
 
+
+
+########################################################################
+#######################HELPER METHODS###################################
+#these are generally small methods that work as they and I have no
+#reason to change or update
+
+def test():
+	print_folder_list(0)
+
+def errprint(printthis):	
+	print("[ERROR] "+printthis)
+	
+def varprint(printthis):
+	print("[VARCHECK] "+str(printthis))
+	return
+	
 def get_sha1sum_local(filepath):
 	f = open(filepath, 'r')
 	string = f.read()
@@ -573,38 +638,6 @@ def get_sha1sum_local(filepath):
 	
 def get_local_files():
 	return os.listdir(os.getcwd())
-	
-def download_all(file_list):
-	for i in file_list:
-		varprint(file_list[i])
-		download_fileid(file_list[i])
-
-
-
-########################################################################
-#######################HELPER METHODS###################################
-
-def errprint(printthis):	
-	print("[ERROR] "+printthis)
-	
-def varprint(printthis):
-	print("[VARCHECK] "+str(printthis))
-	return
-	
-def test():
-	rm_share_url_folder_choices()
-	
-def get_info_folder(folderid):
-	url = "https://api.box.com/2.0/folders/"+folderid
-	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-	r = requests.request("GET", url, None, None, headers)
-	print r.content
-	
-def get_info_file(fileid):
-	url = "https://api.box.com/2.0/folders/"+folderid
-	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-	r = requests.request("GET", url, None, None, headers)
-	print r.content
 	
 ########################################################################
 ##########!!!!!!!!!!!!!!!!!!!!

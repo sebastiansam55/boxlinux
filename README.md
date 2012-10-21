@@ -29,14 +29,14 @@ To use this tool (in it's current state) add it into your BIN, I recommend makin
 * Saves settings to ~/.boxlinux (only setting atm is the auth token from BOX's API)
 
 * Delete Folders
+
+* Removal of share links
 	
 ## Planned Features:
 
-* Selection of folders and files based off of file namespictures 
+* Selection of folders and files based off of filenames 
 
 * Automatic "Syncing"
-
-* Removal of sharing links
 	
 * More sharable link options (expire time, permissions etc.)
 	
