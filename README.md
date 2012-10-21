@@ -27,27 +27,30 @@ To use this tool (in it's current state) add it into your BIN, I recommend makin
 * Create shareable links for files
 	
 * Saves settings to ~/.boxlinux (only setting atm is the auth token from BOX's API)
-	
-### Planned Features:
 
-* Automatic "Syncing"
-	
-* Sharable links for folders
-	
-	* More sharable link options (expire time, permissions etc.)
-	
-		
-* Box Version control (Need box pro account, not feature of free)
-	
 * Delete Folders
 	
-* Upload to other directories
+## Planned Features:
+
+* Selection of folders and files based off of file namespictures 
+
+* Automatic "Syncing"
+
+* Removal of sharing links
+	
+* More sharable link options (expire time, permissions etc.)
+	
+* Box Version control (Need box pro account, not feature of free)
+	
+* Upload to other directories (Needs to be tested)
 	
 * View Comments on File (maybe not sure if that would be useful yet)
 
-* Update file info (rename files)
+* Update file info (rename files etc.)
 	
 * Copy files on BOX (not sure why you would need to but it's in the API)
+
+* Sharing of Files with other Box users...
 	
 * Possible support for non-autheicated shared folder download?
 	
