@@ -401,10 +401,20 @@ def uploadchoices():
 
 def deletefilechoice():
 	print "deletefilechoice place holder"
-	print_file_list()
+	print_file_list(-1)
+	rawinput = raw_input("File to delete: ")
+	fileid = get_file_id(rawinput)
+	deletefile(fileid)
 	
-def deletefile():
-	print "Deletefile place holder"
+	
+def deletefile(fileid):
+	sha1sum = get_sha1sum_remote(fileid)
+	url = "https://api.box.com/2.0/files/"+fileid
+	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
+	payload = {'If-Match': sha1sum}
+	r = requests.request("DELETE", url, None, payload, headers)
+	print r.content
+	
 	
 def deletefolderchoice():
 	print "deletefolderchoice place holder"
@@ -429,14 +439,26 @@ def get_all_file_id():
 	varprint(fileid[0])
 	return fileid
 
-
+def get_sha1sum_remote(fileid):
+	#slight modification of get_file_name or what ever it was 
+	dom = parseString(rootxml)
+	i=0
+	while i<=len(dom.getElementsByTagName('file')):
+		try:
+			if dom.getElementsByTagName('file')[i].getElementsByTagName('id')[0].toxml().replace('<id>','').replace('</id>','')==fileid:
+				sha1sum = dom.getElementsByTagName('file')[i].getElementsByTagName('etag')[0].toxml().replace('<etag>', '').replace('</etag>', '')
+				return sha1sum
+			else:
+				i=i+1
+		except:
+			return
 
 
 
 ########################################################################
 ############################WORKING METHODS#############################
 
-def get_sha1sum(filepath):
+def get_sha1sum_local(filepath):
 	f = open(filepath, 'r')
 	string = f.read()
 	#must be string or buffer not file
