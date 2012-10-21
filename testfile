@@ -1,1 +1,1 @@
-This file is to test sha1sum hashing
+{"type":"error","status":400,"code":"bad_request","help_url":"http:\/\/developers.box.com\/docs\/#errors","message":"Invalid JSON","request_id":"6013687315083febce532f"}

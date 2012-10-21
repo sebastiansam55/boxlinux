@@ -25,7 +25,11 @@ import sha
 import pycurl
 #used to read from pycurl (saw in tut on sourceforge)
 import StringIO
-##helper methods!
+#used for tempfiles...
+import tempfile
+
+#hopefully the solution to all my problems
+import requests##helper methods!
 import helper
 
 
@@ -41,8 +45,8 @@ apikey = "l7c2il3sxmetf2ielkyxbvc2k4nqqkm4"
 global rootxml
 #change this whenever change folders
 #whenever this is updated the rootxml needs to be too!
-global folderid
-folderid = str(0)
+global glo_folderid
+glo_folderid = str(0)
 
 
 
@@ -82,7 +86,8 @@ def loop():
 	print("\t3. Delete File")
 	print("\t4. Delete Folder")
 	print("\t5. Make URL for file")
-	print("\t6. Test Method")
+	print("\t6. Upload File")
+	print("\t7. Test Method")
 	#rawinput should be int
 	#int() is a lifesaver!
 	rawinput = raw_input("What would you like to do?")
@@ -102,6 +107,8 @@ def loop():
 	elif rawinput==5:
 		fileurlchoices()		
 	elif rawinput==6:
+		uploadchoices()
+	elif rawinput==7:
 		test()
 	else:
 		loop()
@@ -162,7 +169,7 @@ def get_folder_list():
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 	#root folder of the BOX account is refered to as "0" 
 	#appending .xml to the end of requests will make the API return XML!
-	request = urllib2.Request("https://api.box.com/2.0/folders/"+folderid+".xml", None, headers)
+	request = urllib2.Request("https://api.box.com/2.0/folders/"+glo_folderid+".xml", None, headers)
 	response = urllib2.urlopen(request)
 	global xmlfolderlist
 	xmlfolderlist = response.read()
@@ -229,10 +236,15 @@ def downloadchoices():
 	#itemcnt = print_folder_list(itemcnt)-1
 	print_file_list(-1)
 	#have to convert to int after command_check in case it's a char or string
-	rawinput = int(raw_input("Select a file to download: "))
+	print("Select 'all' to download all of the files listed")
+	rawinput = raw_input("Select a file to download: ")
 	if command_check(rawinput):
 		return
-	download(int(rawinput))
+	elif str(rawinput)=="all" or str(rawinput)=="ALL":
+		fileids = get_all_file_id()
+		download_all(fileids)
+	else:
+		download(int(rawinput))
 	##return to main loop?
 	loop()
 	
@@ -249,16 +261,37 @@ def download(filenumber):
 	request = urllib2.Request("https://api.box.com/2.0/files/"+fileid+"/content", None, headers)
 	response = urllib2.urlopen(request)
 	filerecieved = response.read()
-	#this will be replaced with a file write method deally
-	filename = get_file_name(filenumber)
+	#this will be replaced with a file write method idealy
+	filename = get_file_name(fileid)
 	f = open(filename, 'w+')
 	print("Writing")
 	f.write(filerecieved)
 	f.close()
+	
+def download_fileid(fileid):
+	fileid=str(fileid)
+	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
+	url = "https://api.box.com/2.0/files/"+fileid+"/content"
+	r = requests.request("GET", url, None, headers)
+	filedata = r.content
+	filename = get_file_name(str(fileid))
+	f = open(filename, 'w')
+	f.write(filedata)
+	f.close()
 
-def get_file_name(filenumber):
+def get_file_name(fileid):
 	dom = parseString(rootxml)
-	nameofitem = dom.getElementsByTagName('file')[filenumber].getElementsByTagName('name')[0].toxml().replace('<name>', '').replace('</name>', '')
+	i=0
+	while i<=len(dom.getElementsByTagName('file')):
+		try:
+			if dom.getElementsByTagName('file')[i].getElementsByTagName('id')[0].toxml().replace('<id>','').replace('</id>','')==fileid:
+				nameofitem = dom.getElementsByTagName('file')[i].getElementsByTagName('name')[0].toxml().replace('<name>', '').replace('</name>', '')
+				return nameofitem
+			else:
+				i=i+1
+		except:
+			return
+	#nameofitem = dom.getElementsByTagName('file')[filenumber].getElementsByTagName('name')[0].toxml().replace('<name>', '').replace('</name>', '')
 	return nameofitem
 	
 def get_file_id(filelistno):
@@ -274,25 +307,18 @@ def get_file_id(filelistno):
 def get_folder_id(folderlistno):
 	dom = parseString(rootxml)
 	#under score because of the global var w/ same name
-	folderid_ = dom.getElementsByTagName('folder')[int(folderlistno)].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
-	return folderid_
-		
-	
-def errprint(printthis):	
-	print("[ERROR] "+printthis)
-	
-def varprint(printthis):
-	print("[VARCHECK] "+str(printthis))
-	
+	glo_folderid_ = dom.getElementsByTagName('folder')[int(folderlistno)].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
+	return glo_folderid_
+			
 def cdchoices():
-	global folderid
+	global glo_folderid
 	global rootxml
 	print_folder_list(0)
 	#have to convert to int after becuase int() throws error when not actually int
 	rawinput = raw_input("Which folder to cd to?")
 	if command_check(rawinput):
 		return
-	folderid = get_folder_id(int(rawinput))
+	glo_folderid = get_folder_id(int(rawinput))
 	rootxml = get_folder_list()
 	itemcnt = print_folder_list(0)
 	##should be removed after testing ?? (below i mean)
@@ -308,25 +334,6 @@ def command_check(rawinput):
 		return True
 		
 		
-#says here that the sha1sum is optional for upload!
-def upload():
-	print "Upload method placeholder"
-	f = open('testfile', 'r')
-	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-	data = {'filename1' : 'testfile', 'folder_id' : '0'}
-	request = urllib2.Request("https://api.box.com/2.0/files/content", data, headers)
-	#request.add_data(f.read())
-	response = urllib2.urlopen(request)
-	print(response.read())
-	
-def uploadchoices():
-	print "Uploadchoices method placeholder"
-		
-def test():
-	print_file_list(-1)
-	list_local_files()
-	getfileurl(0)
-	
 	
 #i know that there are whole modules dedicated to this kind of stuff
 #i just think that this for the moment might be a bit faster than learning them
@@ -363,8 +370,46 @@ def shellhelper():
 		loop()
 		
 		
-##all of the delete methods need SHA1SUM's of the file that they are deleting! ARGGGGG
-##the sha1sum is given in the <etag> in the xml folder listing
+	
+def fileurlchoices():
+	#the -1 is so that the list starts with 0
+	#done for consistency more than anything else
+	print_file_list(-1)
+	rawinput = raw_input("Which file to get URL for? (give the number)")
+	fileid = get_file_id(rawinput)
+	getfileurl(fileid)
+
+#this can later be modified to make more complex links with more complex thingys
+def getfileurl(fileid):
+	fileid = str(fileid)
+	url = "https://api.box.com/2.0/files/"+fileid
+	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
+	payload = {'shared_link': {'access': 'Open'}}
+	r = requests.request("PUT", url, None, json.dumps(payload), headers)
+	print r.content
+	print json.dumps(payload)	
+
+#says here that the sha1sum is optional for upload!
+##IT WORKS!!!!
+def upload(filepath, filename, folderid):
+	print "Uploading..."
+	url = "https://api.box.com/2.0/files/content"
+	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
+	payload = {'filename1': filename, 'folder_id': folderid}
+	data = {filename: open(filepath, 'r')}
+	r = requests.request("POST", url, None, payload, headers, None, data)
+	print r.content
+	
+	
+def uploadchoices():
+#lists files in folder of place where command was invoked
+	print "Choose file to upload"
+	filelist = get_local_files()
+	i = 0
+	for filename in filelist:
+		print str(i)+" "+filename
+		i=i+1
+
 def deletefilechoice():
 	print "deletefilechoice place holder"
 	print_file_list()
@@ -377,67 +422,70 @@ def deletefolderchoice():
 	
 def deletefolder():
 	print "deletefolder placeholder"
-	
-def fileurlchoices():
-	print("fileurlchoices placeholder")
-	#the -1 is so that the list starts with 0
-	#done for consistency more than anything else
-	print_file_list(-1)
-	rawinput = raw_input("Which file to get URL for? (give the number)")
-	fileid = get_file_id(rawinput)
-	getfileurl(fileid)
 
-##right now this returns 400 bad request error code
-##BUT I KNOW I'M CLOSE!
-##it def has to do with the Content Lenght thingy
-def getfileurl(fileid):
-	fileid = str(fileid)
-	f = open('link_access', 'r')
-	filesize = str(os.path.getsize('link_access'))
-	c = pycurl.Curl()
-	c.setopt(pycurl.URL, "https://api.box.com/2.0/files/"+fileid)
-	c.setopt(pycurl.HTTPHEADER, ['Authorization: BoxAuth api_key='+apikey+'&auth_token='+auth_token])
-	#c.setopt(pycurl.HTTPHEADER, ['Content-Length: 30'
-	c.setopt(pycurl.UPLOAD, 1)
-	c.setopt(pycurl.READFUNCTION, f.read)
-	c.setopt(pycurl.INFILESIZE, int(filesize))
-	#c.setopt(pycurl.HTTPPOST, [('shared_link', '{access: Open}')])
-	reader = StringIO.StringIO()
-	c.setopt(pycurl.WRITEFUNCTION, reader.write)
-	c.perform()
-	print reader.getvalue()
-	
-	
-def get_sha1sum():
-	f = open('testfile', 'r')
+def get_all_file_id():
+	dom = parseString(rootxml)
+	cnt = int(dom.getElementsByTagName('total-count')[0].toxml().replace('<total-count>', '').replace('</total-count>', ''))
+	varprint(cnt)
+	fileid={}
+	i=0
+	while i<=cnt:
+		try:
+			fileid[i] = dom.getElementsByTagName('file')[i].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
+			i=i+1
+		except:
+			errprint("file might not exsist")
+			i=cnt+5
+	varprint(fileid)
+	varprint(fileid[0])
+	return fileid
+
+
+
+
+
+########################################################################
+############################WORKING METHODS#############################
+
+def get_sha1sum(filepath):
+	f = open(filepath, 'r')
 	string = f.read()
 	#must be string or buffer not file
 	sha1sum = sha.new(string)
-	#print(sha1sum.hexdigest())
 	return sha1sum.hexdigest()
 	
-def list_local_files():
-	print(os.listdir(os.getcwd()))
+def get_local_files():
+	return os.listdir(os.getcwd())
+	
+def download_all(file_list):
+	for i in file_list:
+		varprint(file_list[i])
+		download_fileid(file_list[i])
+
+
+
+########################################################################
+#######################HELPER METHODS###################################
+
+def errprint(printthis):	
+	print("[ERROR] "+printthis)
+	
+def varprint(printthis):
+	print("[VARCHECK] "+str(printthis))
+	return
+	
+def test():
+	download_all(get_all_file_id())
 	
 	
+def progress(download_t, download_d, upload_t, upload_d):
+	print "Total to download", download_t
+	print "Total downloaded", download_d
+	print "Total to upload", upload_t
+	print "Total uploaded", upload_d
 	
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	
+########################################################################
 	
 ##########!!!!!!!!!!!!!!!!!!!!
 #don't put anything below this; python will stop loading stuff once it gets to this!
@@ -464,4 +512,14 @@ if __name__ == '__main__':
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
+
+
+"""
+Dependincies:
+python-requests
+
+
+
 """
