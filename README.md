@@ -5,7 +5,7 @@ Bringing Box to the Linux desktop
 
 [License] (http://www.gnu.org/licenses/gpl.html)
 
-To use this tool (in it's current state) add it into your BIN, I recommend making a bin folder in your home dir and adding that to your $PATH using your .bash\_rc
+To use this tool (in it's current state) add it into your BIN, I recommend making a bin folder in your home dir and adding that to your $PATH.
 
 
 
@@ -13,6 +13,7 @@ To use this tool (in it's current state) add it into your BIN, I recommend makin
 
 
 [Developers!] (http://i.imgur.com/Mnl5e.jpg)
+======
 
 I really have no idea about what should go here... I use the geany IDE if that makes any difference. 
 
