@@ -20,6 +20,7 @@ To use this tool (in it's current state) add it into your BIN, I recommend makin
 * Download (from any folder)
 	
 	* Download all files in folder!
+	
 		
 * Listing all files in root dir and other dirs (on box)
 	
@@ -34,6 +35,7 @@ To use this tool (in it's current state) add it into your BIN, I recommend makin
 * Sharable links for folders
 	
 	* More sharable link options (expire time, permissions etc.)
+	
 		
 * Box Version control (Need box pro account, not feature of free)
 	
