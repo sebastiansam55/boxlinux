@@ -7,10 +7,6 @@
 
 #For communicating with the BOX APIs
 import urllib2
-#have to use something else to do PUT's and DELETE's
-import httplib
-#for encoding (not sure if necessary)
-import urllib
 #AARGG XML!
 from xml.dom.minidom import parseString
 #I don't think that this is necessary atm
@@ -21,15 +17,11 @@ import os
 import json
 #for hashing files for delete and download checking
 import sha
-#should convert all internet communication to pycurl
-import pycurl
-#used to read from pycurl (saw in tut on sourceforge)
-import StringIO
-#used for tempfiles...
-import tempfile
-
 #hopefully the solution to all my problems
-import requests##helper methods!
+import requests
+
+
+##helper methods!
 import helper
 
 
@@ -164,7 +156,7 @@ def get_auth_token():
 	auth_token = auth_token.replace('<auth_token>', '').replace("</auth_token>", "")
 	save_auth_token()
 
-##this causes so many headaches... it's not just a folder list...
+
 def get_folder_list():
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 	#root folder of the BOX account is refered to as "0" 
@@ -258,9 +250,9 @@ def download(filenumber):
 	fileid = ""
 	fileid = str(get_file_id(filenumber))
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-	request = urllib2.Request("https://api.box.com/2.0/files/"+fileid+"/content", None, headers)
-	response = urllib2.urlopen(request)
-	filerecieved = response.read()
+	url = "https://api.box.com/2.0/files/"+fileid+"/content"
+	r = requests.request("GET", url, None, headers)
+	filerecieved = r.content
 	#this will be replaced with a file write method idealy
 	filename = get_file_name(fileid)
 	f = open(filename, 'w+')
@@ -353,18 +345,15 @@ def shellhelper():
 		print "-V\t\t :will display the Version Number"
 		print "-u <filename>\t :will upload the specified file to the root dir (unless other wise specified)"
 		print "-d <filename>\t :Download the filename... according to the number listed in ls (see below)"
-		#print "\t this has to be the first set of commands in the list"
-		#print "\t like boxlinux -d <filename>  and not boxlinux -V -d <filename>"
 		print "ls\t\t :will display the files and folders in the root dir (unless other wise specified)"
 	elif command=='-V':
 		print 'Version 0.0.0.1'
 	elif command=='ls':
 		print_file_list(print_folder_list(0))
 	elif command=='-u':
-		upload()
+		upload(sys.argv[2])
 	elif command=='-d':
-		#right now the method wants a file number according to the number of items and files listed...
-		#this will end up being a real headache
+		#this is broken right now?
 		download(sys.argv[2])
 	else:
 		loop()
@@ -476,14 +465,6 @@ def varprint(printthis):
 	
 def test():
 	download_all(get_all_file_id())
-	
-	
-def progress(download_t, download_d, upload_t, upload_d):
-	print "Total to download", download_t
-	print "Total downloaded", download_d
-	print "Total to upload", upload_t
-	print "Total uploaded", upload_d
-	
 	
 ########################################################################
 	
