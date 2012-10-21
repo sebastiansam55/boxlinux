@@ -6,49 +6,50 @@ Bringing Box to the Linux desktop
 [License] (http://www.gnu.org/licenses/gpl.html)
 
 To use this tool (in it's current state) add it into your BIN, I recommend making a bin folder in your home dir and adding that to your $PATH. I'd also rename the *main.py* file to boxlinux, which is what it will eventually be.
-Current Capabities:
 
-	* Authentication (through BOX v1 API)
-	
-	* Interactive mode
-	
-	* Command line mode (great for scripting)
-	
-	* Upload (to root dir)
-	
-	* Download (from any folder)
-	
-		* Download all files in folder!
-		
-	* Listing all files in root dir and other dirs (on box)
-	
-	* Create shareable links for files
-	
-	* Saves settings to ~/.boxlinux (only setting atm is the auth token from BOX's API)
-	
-Planned Features:
+## Current Capabities:
 
-	* Automatic "Syncing"
+* Authentication (through BOX v1 API)
+
+* Interactive mode
 	
-	* Sharable links for folders
+* Command line mode (great for scripting)
 	
-		* More sharable link options (expire time, permissions etc.)
+* Upload (to root dir)
+	
+* Download (from any folder)
+	
+	* Download all files in folder!
 		
-	* Box Version control (Need box pro account, not feature of free)
+* Listing all files in root dir and other dirs (on box)
 	
-	* Delete Folders
+* Create shareable links for files
 	
-	* Upload to other directories
+* Saves settings to ~/.boxlinux (only setting atm is the auth token from BOX's API)
 	
-	* View Comments on File (maybe not sure if that would be useful yet)
+### Planned Features:
+
+* Automatic "Syncing"
 	
-	* Update file info (rename files)
+* Sharable links for folders
 	
-	* Copy files on BOX (not sure why you would need to but it's in the API)
+	* More sharable link options (expire time, permissions etc.)
+		
+* Box Version control (Need box pro account, not feature of free)
 	
-	* Possible support for non-autheicated shared folder download?
+* Delete Folders
 	
-	* Anything else I can think of...
+* Upload to other directories
+	
+* View Comments on File (maybe not sure if that would be useful yet)
+
+* Update file info (rename files)
+	
+* Copy files on BOX (not sure why you would need to but it's in the API)
+	
+* Possible support for non-autheicated shared folder download?
+	
+* Anything else I can think of...
 
 
 
