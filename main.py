@@ -650,6 +650,13 @@ def ls():
 	print_file_list(print_folder_list(0))
 	loop()
 	
+	
+##this is for when I go back and take out the parsing the prints that slows it down
+##will make it some config option
+def list_items_shared():
+	print_file_list(print_folder_list(0))
+	loop()
+	
 def firstrun():
 	return os.path.exists('~/.boxlinux')
 
