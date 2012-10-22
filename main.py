@@ -2,23 +2,25 @@
 ##Right now this was written/run/tested with python 2.7
 ##every once in a while i'll run it with python 3 to see if they are still both working
 ##last time I did it was (10/21/2012)
+##another things to do it to take all of the times I've used rawinput as a variable and put more sensible names
 
 ##I am also very inconsistent i sometimes do get_file_name or downloadchoices or deleteFile i don't have a preference if someone wants to do all that work ;)
 
-#AARGG XML!
+#<3 XML!
 from xml.dom.minidom import parseString
-#I don't think that this is necessary atm
+#This is used for the command line version of the program
+#this is what I'm using atm instead of something like optparse
 import sys
 #for checking for file exsistance
+#also creating folders
 import os
 #for the response from the BOX APIS
 import json
 #for hashing files for delete and download checking, also deleting files
 import hashlib
 #hopefully the solution to all my problems
+#this is literally the best module that I have ever used
 import requests
-#used for the timestamps need to remove shared links
-import datetime
 
 ##helper methods!
 import helper
@@ -81,7 +83,9 @@ def loop():
 	print("\t7. Remove URL for File")
 	print("\t8. Remove URL for Folder")
 	print("\t9. Make a new Folder")
-	print("\t10. List Files in Current Dir") 
+	print("\t10. Rename a File")
+	print("\t11. Rename a Folder")
+	print("\t12. List Files in Current Dir") 
 	print("\t-1. Test Method")
 	#rawinput should be int
 	#int() is a lifesaver!
@@ -110,6 +114,10 @@ def loop():
 	elif rawinput==9:
 		new_folder_choices()
 	elif rawinput==10:
+		rename_file_choices()
+	elif rawinput==11:
+		rename_folder_choices()
+	elif rawinput==12:
 		ls()
 	elif rawinput==-1:
 		test()
@@ -197,6 +205,7 @@ def print_folder_list(itemcnt):
 	#the two .replace-s should be in their own method!
 	i=0
 	bol = True
+	sharebool = False
 	#maybe but in another method and then have a while true with return?
 	print("FOLDERS:")
 	while bol:
@@ -204,9 +213,9 @@ def print_folder_list(itemcnt):
 		try:
 			nameoffolder = dom.getElementsByTagName('folder')[i].getElementsByTagName('name')[0].toxml().replace('<name>', '').replace('</name>', '')
 			folderid = dom.getElementsByTagName('folder')[i].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
-			dom_of_folder = parseString(get_info_file(folderid))
+			dom_of_folder = parseString(get_info_folder(folderid))
 			try:
-				dom_of_folder.getElementsByTagName('shared-link')
+				dom_of_folder.getElementsByTagName('shared-link')[0]
 				sharebool = True
 			except:
 				sharebool = False
@@ -232,7 +241,7 @@ def print_file_list(itemcnt):
 			fileid = dom.getElementsByTagName('file')[i].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
 			dom_of_file = parseString(get_info_file(fileid))
 			try:
-				dom_of_file.getElementsByTagName('shared-link')
+				dom_of_file.getElementsByTagName('shared-link')[0]
 				sharebool = True
 			except:
 				sharebool = False
@@ -539,7 +548,6 @@ def rm_share_url_folder(folderid):
 	url = "https://api.box.com/2.0/folders/"+folderid
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 	payload = {'shared_link': None}
-	print payload
 	r = requests.request("PUT", url, None, json.dumps(payload), headers)
 	return r.content
 	
@@ -559,7 +567,6 @@ def rm_share_url_file(fileid):
 	url = "https://api.box.com/2.0/files/"+fileid
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 	payload = {'shared_link': None}
-	print payload
 	r = requests.request("PUT", url, None, json.dumps(payload), headers)
 	return r.content
 	
@@ -578,6 +585,41 @@ def get_folder_name(fileid):
 			return
 	return nameofitem
 	
+def rename_file_choices():
+	print_file_list(-1)
+	filenumber = raw_input("What file to rename? (integer designation): ")
+	fileid = get_file_id(filenumber)
+	print("Renaming: "+get_file_name(fileid)+" Press Q to stop")
+	filename = raw_input("New name for file: ")
+	if filename=='q' or filename=='Q':
+		return
+	rename_file(filename, fileid)	
+	loop()
+	
+def rename_file(newname, fileid):
+	url = "https://api.box.com/2.0/files/"+fileid
+	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
+	payload = {'name': newname}
+	r = requests.request("PUT", url, None, json.dumps(payload), headers)
+	return r.content
+	
+def rename_folder_choices():
+	print_folder_list(0)
+	foldernumber = raw_input("What folder to rename? (integer designation): ")
+	folderid = get_folder_id(foldernumber)
+	print("Renaming: "+get_folder_name(folderid)+" Press Q to stop")
+	foldername = raw_input("New name for folder: ")
+	if foldername=='q' or foldername=='Q':
+		return
+	rename_folder(foldername, folderid)	
+	loop()
+	
+def rename_folder(newname, folderid):
+	url = "https://api.box.com/2.0/folders/"+folderid
+	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
+	payload = {'name': newname}
+	r = requests.request("PUT", url, None, json.dumps(payload), headers)
+	return r.content
 
 
 
@@ -593,13 +635,13 @@ def download_all(file_list):
 		download_fileid(file_list[i])
 		
 def get_info_folder(folderid):
-	url = "https://api.box.com/2.0/folders/"+folderid+".xml"
+	url = "https://api.box.com/2.0/folders/"+str(folderid)+".xml"
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 	r = requests.request("GET", url, None, None, headers)
-	print r.content
+	return r.content
 	
 def get_info_file(fileid):
-	url = "https://api.box.com/2.0/files/"+fileid+".xml"
+	url = "https://api.box.com/2.0/files/"+str(fileid)+".xml"
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 	r = requests.request("GET", url, None, None, headers)
 	return r.content
@@ -620,6 +662,7 @@ def firstrun():
 
 def test():
 	print_folder_list(0)
+	get_info_folder(445859823)
 
 def errprint(printthis):	
 	print("[ERROR] "+printthis)
@@ -672,5 +715,7 @@ if __name__ == '__main__':
 """
 Dependincies:
 python-requests
-python (duh!)
+	in the ubuntu repos it only installs the version for 2.7
+	looking for fix for python3.2 now...
+python2.7 (duh!)
 """
