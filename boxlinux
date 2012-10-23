@@ -189,7 +189,7 @@ def foldercraft(path):
 		print("Folder already exists")
 		
 		
-def print_folder_list(itemcnt):
+def print_folder_list(itemcnt, showshare):
 	itemcnt = int(itemcnt)
 	#this will be BIG method!
 	#how will this work as a daemon??
@@ -207,21 +207,26 @@ def print_folder_list(itemcnt):
 		try:
 			nameoffolder = dom.getElementsByTagName('folder')[i].getElementsByTagName('name')[0].toxml().replace('<name>', '').replace('</name>', '')
 			folderid = dom.getElementsByTagName('folder')[i].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
-			dom_of_folder = parseString(get_info_folder(folderid))
-			try:
-				dom_of_folder.getElementsByTagName('shared-link')[0]
-				sharebool = True
-			except:
-				sharebool = False
+			if showshare==True:
+				dom_of_folder = parseString(get_info_folder(folderid))
+				try:
+					dom_of_folder.getElementsByTagName('shared-link')[0]
+					sharebool = True
+				except:
+					sharebool = False
 			i=i+1
-			print(str(itemcnt)+" "+nameoffolder +" Shared: "+str(sharebool)+" ("+folderid+")")
 			itemcnt = itemcnt+1
+			if showshare==True:
+				print(str(itemcnt)+" "+nameoffolder +" Shared: "+str(sharebool)+" ("+folderid+")")
+			else:
+				print(str(itemcnt)+" "+nameoffolder+" ("+folderid+")")
+
 		except:
 			bol = False	
 			print("End of Folders! On the "+str(itemcnt))
 	return itemcnt
 
-def print_file_list(itemcnt):
+def print_file_list(itemcnt, showshare):
 	itemcnt = int(itemcnt)
 	dom = parseString(rootxml)		
 	print("############################")
@@ -233,22 +238,26 @@ def print_file_list(itemcnt):
 		try:
 			nameofitem = dom.getElementsByTagName('file')[i].getElementsByTagName('name')[0].toxml().replace('<name>', '').replace('</name>', '')		
 			fileid = dom.getElementsByTagName('file')[i].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
-			dom_of_file = parseString(get_info_file(fileid))
-			try:
-				dom_of_file.getElementsByTagName('shared-link')[0]
-				sharebool = True
-			except:
-				sharebool = False
+			if showshare==True:
+				dom_of_file = parseString(get_info_file(fileid))
+				try:
+					dom_of_file.getElementsByTagName('shared-link')[0]
+					sharebool = True
+				except:
+					sharebool = False
 			i=i+1
 			itemcnt = itemcnt+1
-			print(str(itemcnt)+" "+nameofitem+" Shared: "+str(sharebool)+" ("+fileid+")")
+			if showshare==True:
+				print(str(itemcnt)+" "+nameofitem+" Shared: "+str(sharebool)+" ("+fileid+")")
+			else:
+				print(str(itemcnt)+" "+nameofitem+" ("+fileid+")")
 		except:
 			print("End of Items! On the "+str(itemcnt))
 			bol=False
 	
 def downloadchoices():
 	#itemcnt = print_folder_list(itemcnt)-1
-	print_file_list(-1)
+	print_file_list(-1, False)
 	#have to convert to int after command_check in case it's a char or string
 	print("Select 'all' to download all of the files listed")
 	rawinput = raw_input("Select a file to download: ")
@@ -326,15 +335,15 @@ def get_folder_id(folderlistno):
 			
 def cdchoices():
 	global rootxml
-	print_folder_list(0)
+	print_folder_list(0, False)
 	#have to convert to int after becuase int() throws error when not actually int
 	rawinput = raw_input("Which folder to cd to?")
 	if command_check(rawinput):
 		return
 	rootxml = get_folder_list(get_folder_id(int(rawinput)))
-	itemcnt = print_folder_list(0)
+	itemcnt = print_folder_list(0, False)
 	##should be removed after testing ?? (below i mean)
-	print_file_list(int(itemcnt))
+	print_file_list(int(itemcnt), False)
 	##return to main loop?
 	loop()
 	
@@ -371,7 +380,7 @@ def shellhelper():
 	elif command=='-V':
 		print('Version 0.0.0.1')
 	elif command=='ls':
-		print_file_list(print_folder_list(0))
+		print_file_list(print_folder_list(0, False))
 	elif command=='-u':
 		upload(sys.argv[2])
 	elif command=='-d':
@@ -397,7 +406,7 @@ def shellhelper():
 def fileurlchoices():
 	#the -1 is so that the list starts with 0
 	#done for consistency more than anything else
-	print_file_list(-1)
+	print_file_list(-1, True)
 	rawinput = raw_input("Which file to get URL for? (give the number)")
 	fileid = get_file_id(rawinput)
 	urls = get_file_url(fileid)
@@ -445,7 +454,7 @@ def uploadchoices():
 	loop()
 
 def deletefilechoice():
-	print_file_list(-1)
+	print_file_list(-1, True)
 	rawinput = raw_input("File to delete: ")
 	fileid = get_file_id(rawinput)
 	deletefile(fileid)
@@ -463,7 +472,7 @@ def deletefile(fileid):
 	
 def deletefolderchoice():
 	#instead of -1 should be zero because of the all files thing in all directories
-	print_folder_list(0)
+	print_folder_list(0, True)
 	rawinput = raw_input("Folder to delete: ")
 	folderid = get_folder_id(rawinput)
 	deletefolder(folderid)
@@ -523,14 +532,14 @@ def mk_new_folder(foldername, parent_folderid):
 	
 def new_folder_choices():
 	print("Current Folders:")
-	print_folder_list(0)
+	print_folder_list(0, False)
 	newfoldername = raw_input("Name for new folder:")
 	parentfolder = raw_input("Parent Folder (0) for root")
 	mk_new_folder(newfoldername, get_folder_id(parentfolder))
 	loop()
 	
 def folder_url_choices():
-	print_folder_list(0)
+	print_folder_list(0, True)
 	folderid = raw_input("Folder to make new link for: ")
 	urls = get_folder_url(get_folder_id(folderid))
 	print("Download URL: "+urls[0])
@@ -558,13 +567,13 @@ def rm_share_url_folder(folderid):
 	return r.content
 	
 def rm_share_url_folder_choices():
-	print_folder_list(0)
+	print_folder_list(0, True)
 	rawinput = raw_input("Which folder to unshare?")
 	rm_share_url_folder(get_folder_id(rawinput))
 	loop()
 	
 def rm_share_url_file_choices():
-	print_file_list(0)
+	print_file_list(0, True)
 	rawinput = raw_input("Which file to unshare?")
 	rm_share_url_file(get_file_id(rawinput))
 	loop()
@@ -592,7 +601,7 @@ def get_folder_name(fileid):
 	return nameofitem
 	
 def rename_file_choices():
-	print_file_list(-1)
+	print_file_list(-1, True)
 	filenumber = raw_input("What file to rename? (integer designation): ")
 	fileid = get_file_id(filenumber)
 	print("Renaming: "+get_file_name(fileid)+" Press Q to stop")
@@ -610,7 +619,7 @@ def rename_file(newname, fileid):
 	return r.content
 	
 def rename_folder_choices():
-	print_folder_list(0)
+	print_folder_list(0, True)
 	foldernumber = raw_input("What folder to rename? (integer designation): ")
 	folderid = get_folder_id(foldernumber)
 	print("Renaming: "+get_folder_name(folderid)+" Press Q to stop")
@@ -653,14 +662,14 @@ def get_info_file(fileid):
 	return r.content
 	
 def ls():
-	print_file_list(print_folder_list(0))
+	print_file_list(print_folder_list(-1, False), False)
 	loop()
 	
 	
 ##this is for when I go back and take out the parsing the prints that slows it down
 ##will make it some config option
 def list_items_shared():
-	print_file_list(print_folder_list(0))
+	print_file_list(print_folder_list(0, True), False)
 	loop()
 	
 def firstrun():
@@ -674,7 +683,6 @@ def firstrun():
 #reason to change or update
 
 def test():
-	print_folder_list(0)
 	get_info_folder(445859823)
 
 def errprint(printthis):	
