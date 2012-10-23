@@ -38,7 +38,7 @@ The only problem that I have run into with trying to run it is that python3.2 (o
 	
 ## Planned Features:
 
-* Option to shorten all URLS returned (either goo.gl or bit.ly)
+* Option to shorten all URLS returned (either goo.gl, bit.ly or maybe both)
 
 * Selection of folders and files based off of filenames 
 
@@ -82,5 +82,7 @@ This documentation is aboslutely atrocious (in my opinion) I mean it looks nice,
 [README.md syntax] (http://daringfireball.net/projects/markdown/syntax)
 
 [Requests documentation] (http://docs.python-requests.org/en/latest/api/)
+
+[Bit.ly URL shortening Service] (http://dev.bitly.com/api.html) (Not yet implemented!)
 
 I have choosen, because of my familarness with XML that all the responses from the BOX API should be requested in XML format, now that I've used JSON a bit, I might convert everything over sometime or other

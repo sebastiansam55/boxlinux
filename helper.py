@@ -2,3 +2,10 @@
 
 ##helper methods !
 #on second thought I question the helpfulness of splitting all the files up like this
+
+
+def errprint(printthis):	
+	print("[ERROR] "+printthis)
+	
+def varprint(printthis):
+	print("[VARCHECK] "+str(printthis))

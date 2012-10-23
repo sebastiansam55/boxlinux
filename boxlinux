@@ -83,8 +83,6 @@ def loop():
 	print("\t11. Rename a Folder")
 	print("\t12. List Files in Current Dir") 
 	print("\t-1. Test Method")
-	#rawinput should be int
-	#int() is a lifesaver!
 	rawinput = raw_input("What would you like to do?")
 	if command_check(rawinput):
 		return
@@ -130,12 +128,6 @@ def authenticate():
 	#gets rid of the XML tags!
 	ticket = ticket.replace('<ticket>', '').replace("</ticket>","")
 	return ticket
-	
-def save_settings(setting):
-	#the ~/ DOES NOT WORK, should substutie something else like a $USER
-	f = open('/home/sam/.boxlinux', 'a')
-	f.write(setting)
-	f.close()
 	
 def load_settings():
 	#the ~/ DOES NOT WORK, should substutie something else like a $USER
@@ -201,7 +193,7 @@ def print_folder_list(itemcnt, showshare):
 			nameoffolder = dom.getElementsByTagName('folder')[i].getElementsByTagName('name')[0].toxml().replace('<name>', '').replace('</name>', '')
 			folderid = dom.getElementsByTagName('folder')[i].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
 			if showshare==True:
-				dom_of_folder = parseString(get_info_folder(folderid))
+				dom_of_folder = parseString(get_info_item(folderid, "folder"))
 				try:
 					dom_of_folder.getElementsByTagName('shared-link')[0]
 					sharebool = True
@@ -232,7 +224,7 @@ def print_file_list(itemcnt, showshare):
 			nameofitem = dom.getElementsByTagName('file')[i].getElementsByTagName('name')[0].toxml().replace('<name>', '').replace('</name>', '')		
 			fileid = dom.getElementsByTagName('file')[i].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
 			if showshare==True:
-				dom_of_file = parseString(get_info_file(fileid))
+				dom_of_file = parseString(get_info_item(fileid, "FILE"))
 				try:
 					dom_of_file.getElementsByTagName('shared-link')[0]
 					sharebool = True
@@ -312,12 +304,10 @@ def get_file_name(fileid):
 	
 def get_file_id(filelistno):
 	dom = parseString(rootxml)
-	varprint(filelistno)
 	try:
 		fileid = dom.getElementsByTagName('file')[int(filelistno)].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
 	except:
-		errprint("file might not exsist")
-	varprint(fileid)
+		helper.errprint("file might not exsist")
 	return fileid
 	
 def get_folder_id(folderlistno):
@@ -390,7 +380,7 @@ def shellhelper():
 				foldercraft("./"+foldername)
 				icnt = icnt+1
 		except:
-			errprint("You might be okay...")
+			helper.errprint("You might be okay...")
 	else:
 		loop()
 		
@@ -475,7 +465,7 @@ def deletefolderchoice():
 def deletefolder(folderid):
 	print("Deleting Folder with id "+folderid)
 	url = "https://api.box.com/2.0/folders/"+str(folderid)+"?recurive=true"
-	varprint(url)
+	#varprint(url)
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 	payload = {'recursive': 'true'}
 	r = requests.request("DELETE", url, None, None, headers)
@@ -484,7 +474,6 @@ def deletefolder(folderid):
 def get_all_file_id():
 	dom = parseString(rootxml)
 	cnt = int(dom.getElementsByTagName('total-count')[0].toxml().replace('<total-count>', '').replace('</total-count>', ''))
-	varprint(cnt)
 	fileid={}
 	i=0
 	while i<=cnt:
@@ -492,10 +481,8 @@ def get_all_file_id():
 			fileid[i] = dom.getElementsByTagName('file')[i].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
 			i=i+1
 		except:
-			errprint("file might not exsist")
+			helper.errprint("file might not exsist")
 			i=cnt+5
-	varprint(fileid)
-	varprint(fileid[0])
 	return fileid
 
 def get_sha1sum_remote(fileid):
@@ -519,7 +506,6 @@ def mk_new_folder(foldername, parent_folderid):
 	url = "https://api.box.com/2.0/folders/"
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 	payload = {'name': ''+foldername+'', 'parent': {'id': '0'}}
-	varprint(payload)
 	r = requests.request("POST", url, None, json.dumps(payload), headers)
 	return r.content
 	
@@ -552,32 +538,32 @@ def get_folder_url(folderid):
 	
 	
 #you have to send null value for the 'shared_link'!
-def rm_share_url_folder(folderid):
-	url = "https://api.box.com/2.0/folders/"+folderid
-	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-	payload = {'shared_link': None}
-	r = requests.request("PUT", url, None, json.dumps(payload), headers)
-	return r.content
+def rm_share_url_item(itemid, itemtype):
+	if itemtype=="folder" or itemtype=="FOLDER":
+		url = "https://api.box.com/2.0/folders/"+itemid
+		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
+		payload = {'shared_link': None}
+		r = requests.request("PUT", url, None, json.dumps(payload), headers)
+		return r.content
+	elif itemtpye=="file" or itemtype=="FILE":
+		url = "https://api.box.com/2.0/files/"+itemid
+		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
+		payload = {'shared_link': None}
+		r = requests.request("PUT", url, None, json.dumps(payload), headers)
+		return r.content
+		
 	
 def rm_share_url_folder_choices():
 	print_folder_list(0, True)
 	rawinput = raw_input("Which folder to unshare?")
-	rm_share_url_folder(get_folder_id(rawinput))
+	rm_share_url_item(get_folder_id(rawinput), "folder")
 	loop()
 	
 def rm_share_url_file_choices():
 	print_file_list(0, True)
 	rawinput = raw_input("Which file to unshare?")
-	rm_share_url_file(get_file_id(rawinput))
-	loop()
-	
-def rm_share_url_file(fileid):
-	url = "https://api.box.com/2.0/files/"+fileid
-	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-	payload = {'shared_link': None}
-	r = requests.request("PUT", url, None, json.dumps(payload), headers)
-	return r.content
-	
+	rm_share_url_item(get_file_id(rawinput), "FILE")
+	loop()	
 	
 def get_folder_name(fileid):
 	dom = parseString(rootxml)
@@ -639,21 +625,21 @@ def rename_folder(newname, folderid):
 	
 def download_all(file_list):
 	for i in file_list:
-		varprint(file_list[i])
+		#varprint(file_list[i])
 		download_fileid(file_list[i])
 		
-def get_info_folder(folderid):
-	url = "https://api.box.com/2.0/folders/"+str(folderid)+".xml"
-	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-	r = requests.request("GET", url, None, None, headers)
-	return r.content
-	
-def get_info_file(fileid):
-	url = "https://api.box.com/2.0/files/"+str(fileid)+".xml"
-	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-	r = requests.request("GET", url, None, None, headers)
-	return r.content
-	
+def get_info_item(itemid, itemtype):
+	if itemtype=="folder" || itemtype=="FOLDER":
+		url = "https://api.box.com/2.0/folders/"+str(itemid)+".xml"
+		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
+		r = requests.request("GET", url, None, None, headers)
+		return r.content
+	elif itemtype=="file" || itemtype=="FILE":
+		url = "https://api.box.com/2.0/files/"+str(itemid)+".xml"
+		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
+		r = requests.request("GET", url, None, None, headers)
+		return r.content
+		
 def ls():
 	print_file_list(print_folder_list(-1, False), False)
 	loop()
@@ -676,14 +662,7 @@ def firstrun():
 #reason to change or update
 
 def test():
-	get_info_folder(445859823)
-
-def errprint(printthis):	
-	print("[ERROR] "+printthis)
-	
-def varprint(printthis):
-	print("[VARCHECK] "+str(printthis))
-	return
+	get_info_item(445859823, "folder")
 	
 def get_sha1sum_local(filepath):
 	f = open(filepath, 'r')
