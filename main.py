@@ -351,7 +351,7 @@ def shellhelper():
 	rootxml = get_folder_list(0) ##make the rootxml...
 	command = str(sys.argv[1])
 	#listed in order of usage (suspected usage at least)
-	if command=='-h':
+	if command=='-h' or command=='--help':
 		print("usage boxlinux [option] At this stage only one command at a time will work....")
 		print("-h\t\t :will display this help message")
 		print("-V\t\t :will display the Version Number")
@@ -360,12 +360,12 @@ def shellhelper():
 		print("ls\t\t :will display the files and folders in the root dir (unless other wise specified)")
 		print("-da Will download all the files in the root directory (not yet recursive)")
 		print("-mkfolders Makes folders based on Box folders")
-	elif command=='-V':
+	elif command=='-V' or command=='-version':
 		print('Version 0.0.0.1')
 	elif command=='ls':
 		print_file_list(print_folder_list(0, False))
-	elif command=='-u':
-		upload_command()
+	elif command=='-u' or command=='--upload':
+		upload(os.getcwd()+"/"+sys.argv[2], sys.argv[2], 0)
 	elif command=='-d':
 		#this is broken right now?
 		download(sys.argv[2])
@@ -614,11 +614,6 @@ def rename_folder(newname, folderid):
 	payload = {'name': newname}
 	r = requests.request("PUT", url, None, json.dumps(payload), headers)
 	return r.content
-
-def upload_command():
-	filename = sys.argv[2]
-	upload(os.getcwd()+"/"+filename, filename, 0)
-
 
 
 ########################################################################
