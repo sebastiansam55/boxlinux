@@ -27,7 +27,6 @@ import helper
 
 
 #do globals have to be declared outside of methods?
-global xmlfolderlist
 #BoxyLinux API-KEY
 global apikey
 apikey = "l7c2il3sxmetf2ielkyxbvc2k4nqqkm4"
@@ -176,8 +175,6 @@ def get_folder_list(folderid):
 	#root folder of the BOX account is refered to as "0" 
 	#appending .xml to the end of requests will make the API return XML!
 	r = requests.request("GET", url, None, None, headers)
-	global xmlfolderlist
-	xmlfolderlist = r.content
 	return r.content
 	
 	
