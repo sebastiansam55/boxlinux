@@ -34,9 +34,6 @@ apikey = "l7c2il3sxmetf2ielkyxbvc2k4nqqkm4"
 #global xml for procesing ie the root folder xml info
 global rootxml
 #change this whenever change folders
-#whenever this is updated the rootxml needs to be too!
-global glo_folderid
-glo_folderid = str(0)
 
 
 
@@ -72,7 +69,7 @@ def main():
 		
 def loop():
 	global rootxml
-	rootxml = get_folder_list()
+	rootxml = get_folder_list(0)
 	print("	0. Download")
 	print("\t1. Change Directory")
 	print("\t2. Upload File")
@@ -173,8 +170,8 @@ def get_auth_token():
 	save_auth_token()
 
 
-def get_folder_list():
-	url = "https://api.box.com/2.0/folders/"+glo_folderid+".xml"
+def get_folder_list(folderid):
+	url = "https://api.box.com/2.0/folders/"+str(folderid)+".xml"
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 	#root folder of the BOX account is refered to as "0" 
 	#appending .xml to the end of requests will make the API return XML!
@@ -199,7 +196,7 @@ def print_folder_list(itemcnt):
 	itemcnt = int(itemcnt)
 	#this will be BIG method!
 	#how will this work as a daemon??
-	dom = parseString(get_folder_list())
+	dom = parseString(rootxml)
 	#number of items in the folder
 	#should this be in it's own method?
 	#the two .replace-s should be in their own method!
@@ -331,15 +328,13 @@ def get_folder_id(folderlistno):
 	return folderid
 			
 def cdchoices():
-	global glo_folderid
 	global rootxml
 	print_folder_list(0)
 	#have to convert to int after becuase int() throws error when not actually int
 	rawinput = raw_input("Which folder to cd to?")
 	if command_check(rawinput):
 		return
-	glo_folderid = get_folder_id(int(rawinput))
-	rootxml = get_folder_list()
+	rootxml = get_folder_list(get_folder_id(int(rawinput)))
 	itemcnt = print_folder_list(0)
 	##should be removed after testing ?? (below i mean)
 	print_file_list(int(itemcnt))
@@ -364,7 +359,7 @@ def shellhelper():
 	#some globals will also have to be set/reset... rootxml auth_token etc.
 	load_settings() #this will load auth_token
 	global rootxml
-	rootxml = get_folder_list() ##make the rootxml...
+	rootxml = get_folder_list(0) ##make the rootxml...
 	command = str(sys.argv[1])
 	#listed in order of usage (suspected usage at least)
 	if command=='-h':
@@ -389,7 +384,6 @@ def shellhelper():
 		download_all(get_all_file_id())
 	elif command=='-mkfolders':
 		try:
-			#xml = get_folder_list()
 			dom = parseString(rootxml)
 			icnt=1
 			for i in dom.getElementsByTagName('folder'):
