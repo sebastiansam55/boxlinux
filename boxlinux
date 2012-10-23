@@ -365,7 +365,7 @@ def shellhelper():
 	elif command=='ls':
 		print_file_list(print_folder_list(0, False))
 	elif command=='-u':
-		upload(sys.argv[2])
+		upload_command()
 	elif command=='-d':
 		#this is broken right now?
 		download(sys.argv[2])
@@ -615,6 +615,9 @@ def rename_folder(newname, folderid):
 	r = requests.request("PUT", url, None, json.dumps(payload), headers)
 	return r.content
 
+def upload_command():
+	filename = sys.argv[2]
+	upload(os.getcwd()+"/"+filename, filename, 0)
 
 
 
