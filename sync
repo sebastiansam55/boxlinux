@@ -1,0 +1,16 @@
+#!/bin/bash
+if [ -d ~/Box ]; then
+	#the directory exists
+	cd ~/Box
+	boxlinux -da
+	boxlinux -mkfolders
+else
+	#the directory does not exists have to create it
+	mkdir ~/Box
+	cd ~/Box
+	boxlinux -da
+	boxlinux -mkfolders
+	ListOfFiles =`ls -1d */`
+	boxlinux sync ListOfFiles
+fi
+
