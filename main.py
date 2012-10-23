@@ -188,11 +188,11 @@ def get_folder_list():
 	#should also have ability to read option from file
 def foldercraft(path):
 	#I *think* that this will check for both exsisteance of file and folder?
-	if not os.path_exists(path):
+	if not os.path.exists(path):
 		#this might be the right way?
-		os.mkdirs(path)
+		os.makedirs(path)
 	else:
-		print("")
+		print("Folder already exists")
 		
 		
 def print_folder_list(itemcnt):
@@ -374,6 +374,8 @@ def shellhelper():
 		print("-u <filename>\t :will upload the specified file to the root dir (unless other wise specified)")
 		print("-d <filename>\t :Download the filename... according to the number listed in ls (see below)")
 		print("ls\t\t :will display the files and folders in the root dir (unless other wise specified)")
+		print("-da Will download all the files in the root directory (not yet recursive)")
+		print("-mkfolders Makes folders based on Box folders")
 	elif command=='-V':
 		print('Version 0.0.0.1')
 	elif command=='ls':
@@ -383,6 +385,19 @@ def shellhelper():
 	elif command=='-d':
 		#this is broken right now?
 		download(sys.argv[2])
+	elif command=='-da':
+		download_all(get_all_file_id())
+	elif command=='-mkfolders':
+		try:
+			#xml = get_folder_list()
+			dom = parseString(rootxml)
+			icnt=1
+			for i in dom.getElementsByTagName('folder'):
+				foldername = dom.getElementsByTagName('folder')[icnt].getElementsByTagName('name')[0].toxml().replace('<name>', '').replace('</name>', '')
+				foldercraft("./"+foldername)
+				icnt = icnt+1
+		except:
+			errprint("You might be okay...")
 	else:
 		loop()
 		
