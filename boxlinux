@@ -629,12 +629,12 @@ def download_all(file_list):
 		download_fileid(file_list[i])
 		
 def get_info_item(itemid, itemtype):
-	if itemtype=="folder" || itemtype=="FOLDER":
+	if itemtype=="folder" or itemtype=="FOLDER":
 		url = "https://api.box.com/2.0/folders/"+str(itemid)+".xml"
 		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 		r = requests.request("GET", url, None, None, headers)
 		return r.content
-	elif itemtype=="file" || itemtype=="FILE":
+	elif itemtype=="file" or itemtype=="FILE":
 		url = "https://api.box.com/2.0/files/"+str(itemid)+".xml"
 		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 		r = requests.request("GET", url, None, None, headers)
