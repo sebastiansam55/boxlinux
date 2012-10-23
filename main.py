@@ -51,11 +51,11 @@ def main():
 				print("Quitting")
 				return 0
 			else:
-				authenticate()
+				ticket = authenticate()
 				print("Open this link in browser and confirm!")
 				print("https://www.box.com/api/1.0/auth/"+ticket)
 				raw_input("Press enter when approved")
-				get_auth_token()
+				get_auth_token(ticket)
 			
 		else:
 			print("Loading settings")
@@ -126,17 +126,10 @@ def authenticate():
 	r = requests.get("https://www.box.com/api/1.0/rest?action=get_ticket&api_key="+apikey)
 	xml = r.content
 	dom = parseString(xml)
-	global ticket
 	ticket = dom.getElementsByTagName('ticket')[0].toxml()
 	#gets rid of the XML tags!
 	ticket = ticket.replace('<ticket>', '').replace("</ticket>","")
 	return ticket
-	
-def save_ticket():
-	#the ~/ DOES NOT WORK, should substutie something else like a $USER
-	f = open('/home/sam/.boxlinux', 'w')
-	f.write(ticket)
-	f.close()
 	
 def save_settings(setting):
 	#the ~/ DOES NOT WORK, should substutie something else like a $USER
@@ -158,7 +151,7 @@ def save_auth_token():
 	f.close()
 	
 	
-def get_auth_token():
+def get_auth_token(ticket):
 	r = requests.get("https://www.box.com/api/1.0/rest?action=get_auth_token&api_key="+apikey+"&ticket="+ticket)
 	xml = r.content
 	dom = parseString(xml)	
