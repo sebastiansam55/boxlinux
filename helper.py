@@ -9,3 +9,6 @@ def errprint(printthis):
 	
 def varprint(printthis):
 	print("[VARCHECK] "+str(printthis))
+	
+def infoprint(printthis):
+	print("[INFO] "+str(printthis))

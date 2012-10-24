@@ -16,8 +16,6 @@ import sys
 import os
 #for the response from the BOX APIS
 import json
-#for hashing files for delete and download checking, also deleting files
-import hashlib
 #hopefully the solution to all my problems
 #this is literally the best module that I have ever used
 import requests
@@ -30,18 +28,13 @@ import helper
 #BoxyLinux API-KEY
 global apikey
 apikey = "l7c2il3sxmetf2ielkyxbvc2k4nqqkm4"
-#global xml for procesing ie the root folder xml info
-global rootxml
 #change this whenever change folders
+global rootdom
 
 
-
-
-#Should rearrange MAIN loop 
-#maybe have option to look for system arguments and send it one way or the other?
 def main():
 	if int(len(sys.argv))==1:
-		if not firstrun():
+		if not os.path.exists('~/.boxlinux'):
 			print("Have you approved this app for use? [Y/n/Q]")
 			yorn = raw_input()
 			if yorn=='Y'or yorn=='y':			
@@ -67,8 +60,8 @@ def main():
 		
 		
 def loop():
-	global rootxml
-	rootxml = get_folder_list(0)
+	global rootdom
+	rootdom = parseString(get_folder_list(0))
 	print("	0. Download")
 	print("\t1. Change Directory")
 	print("\t2. Upload File")
@@ -83,37 +76,37 @@ def loop():
 	print("\t11. Rename a Folder")
 	print("\t12. List Files in Current Dir") 
 	print("\t-1. Test Method")
-	rawinput = raw_input("What would you like to do?")
-	if command_check(rawinput):
+	command = raw_input("What would you like to do?")
+	if command_check(command):
 		return
-	rawinput = int(rawinput)
-	if rawinput==0:
-		downloadchoices()
-	elif rawinput==1:
+	command = int(command)
+	if command==0:
+		download_choices()
+	elif command==1:
 		cdchoices()
-	elif rawinput==2:
+	elif command==2:
 		uploadchoices()
-	elif rawinput==3:
+	elif command==3:
 		deletefilechoice()
-	elif rawinput==4:
+	elif command==4:
 		deletefolderchoice()
-	elif rawinput==5:
+	elif command==5:
 		fileurlchoices()		
-	elif rawinput==6:
+	elif command==6:
 		folder_url_choices()
-	elif rawinput==7:
+	elif command==7:
 		rm_share_url_file_choices()
-	elif rawinput==8:
+	elif command==8:
 		rm_share_url_folder_choices()		
-	elif rawinput==9:
+	elif command==9:
 		new_folder_choices()
-	elif rawinput==10:
+	elif command==10:
 		rename_file_choices()
-	elif rawinput==11:
+	elif command==11:
 		rename_folder_choices()
-	elif rawinput==12:
+	elif command==12:
 		ls()
-	elif rawinput==-1:
+	elif command==-1:
 		test()
 	else:
 		loop()
@@ -178,7 +171,7 @@ def print_folder_list(itemcnt, showshare):
 	itemcnt = int(itemcnt)
 	#this will be BIG method!
 	#how will this work as a daemon??
-	dom = parseString(rootxml)
+	dom = rootdom
 	#number of items in the folder
 	#should this be in it's own method?
 	#the two .replace-s should be in their own method!
@@ -213,7 +206,7 @@ def print_folder_list(itemcnt, showshare):
 
 def print_file_list(itemcnt, showshare):
 	itemcnt = int(itemcnt)
-	dom = parseString(rootxml)		
+	dom = rootdom	
 	print("############################")
 	print("FILES: ")
 	sharebool = False
@@ -240,19 +233,19 @@ def print_file_list(itemcnt, showshare):
 			print("End of Items! On the "+str(itemcnt))
 			bol=False
 	
-def downloadchoices():
+def download_choices():
 	#itemcnt = print_folder_list(itemcnt)-1
 	print_file_list(-1, False)
 	#have to convert to int after command_check in case it's a char or string
 	print("Select 'all' to download all of the files listed")
-	rawinput = raw_input("Select a file to download: ")
-	if command_check(rawinput):
+	dlchoice = raw_input("Select a file to download: ")
+	if command_check(dlchoice):
 		return
-	elif str(rawinput)=="all" or str(rawinput)=="ALL":
+	elif str(dlchoice)=="all" or str(dlchoice)=="ALL":
 		fileids = get_all_file_id()
 		download_all(fileids)
 	else:
-		download(int(rawinput))
+		download(int(dlchoice))
 	##return to main loop?
 	loop()
 	
@@ -268,11 +261,12 @@ def download(filenumber):
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 	url = "https://api.box.com/2.0/files/"+fileid+"/content"
 	r = requests.request("GET", url, None, headers)
+	helper.infoprint("Downloading...")
 	filerecieved = r.content
 	#this will be replaced with a file write method idealy
 	filename = get_file_name(fileid)
 	f = open(filename, 'w+')
-	print("Writing")
+	helper.infoprint("Writing...")
 	f.write(filerecieved)
 	f.close()
 	
@@ -288,7 +282,7 @@ def download_fileid(fileid):
 	f.close()
 
 def get_file_name(fileid):
-	dom = parseString(rootxml)
+	dom = rootdom
 	i=0
 	while i<=len(dom.getElementsByTagName('file')):
 		try:
@@ -303,52 +297,51 @@ def get_file_name(fileid):
 	return nameofitem
 	
 def get_file_id(filelistno):
-	dom = parseString(rootxml)
+	dom = rootdom
 	try:
 		fileid = dom.getElementsByTagName('file')[int(filelistno)].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
 	except:
 		helper.errprint("file might not exsist")
 	return fileid
 	
+def file_id_from_name(filename):
+	dom = rootdom
+	for files in dom.getElementsByTagName('file'):
+		testervar = files.getElementsByTagName('name')[0].toxml().replace('<name>','').replace('</name>','')
+		if testervar==filename:
+			return files.getElementsByTagName('id')[0].toxml().replace('<id>','').replace('</id>','')
+	
 def get_folder_id(folderlistno):
-	dom = parseString(rootxml)
+	dom = rootdom
 	#under score because of the global var w/ same name
 	folderid = dom.getElementsByTagName('folder')[int(folderlistno)].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
 	return folderid
 			
 def cdchoices():
-	global rootxml
+	global rootdom
 	print_folder_list(0, False)
-	#have to convert to int after becuase int() throws error when not actually int
-	rawinput = raw_input("Which folder to cd to?")
-	if command_check(rawinput):
+	cdto = raw_input("Which folder to cd to?")
+	if command_check(cdto):
 		return
-	rootxml = get_folder_list(get_folder_id(int(rawinput)))
+	rootdom = parseString(get_folder_list(get_folder_id(int(cdto))))
 	itemcnt = print_folder_list(0, False)
-	##should be removed after testing ?? (below i mean)
 	print_file_list(int(itemcnt), False)
-	##return to main loop?
 	loop()
-	
-#right now this works because there is only quit command
-#if it's going to be command line like there should be something different; don't know quite what yet	
-def command_check(rawinput):
-	rawinput = str(rawinput)
-	if rawinput=='Q' or rawinput=='q':
+		
+def command_check(command):
+	command = str(command)
+	if command=='Q' or command=='q':
 		return True
 		
-		
-	
-#i know that there are whole modules dedicated to this kind of stuff
-#i just think that this for the moment might be a bit faster than learning them
+#TODO: Convert this to prebuilt module like optparse
 def shellhelper():
 	#as of right now the best I can do is offer only access to the root
 	#should write something that will get the folders and files into an xml file...
 	#it could then do some matching to match file names with fileids'
 	#some globals will also have to be set/reset... rootxml auth_token etc.
 	load_settings() #this will load auth_token
-	global rootxml
-	rootxml = get_folder_list(0) ##make the rootxml...
+	global rootdom
+	rootdom = parseString(get_folder_list(0))
 	command = str(sys.argv[1])
 	#listed in order of usage (suspected usage at least)
 	if command=='-h' or command=='--help':
@@ -360,6 +353,8 @@ def shellhelper():
 		print("ls\t\t :will display the files and folders in the root dir (unless other wise specified)")
 		print("-da Will download all the files in the root directory (not yet recursive)")
 		print("-mkfolders Makes folders based on Box folders")
+		##GET TO WORK ON THIS LATER
+		print("-rm <filename>\t :will delete file on Box.com with same name and sha1sum")
 	elif command=='-V' or command=='-version':
 		print('Version 0.0.0.1')
 	elif command=='ls':
@@ -367,13 +362,12 @@ def shellhelper():
 	elif command=='-u' or command=='--upload':
 		upload(os.getcwd()+"/"+sys.argv[2], sys.argv[2], 0)
 	elif command=='-d':
-		#this is broken right now?
 		download(sys.argv[2])
 	elif command=='-da':
 		download_all(get_all_file_id())
 	elif command=='-mkfolders':
 		try:
-			dom = parseString(rootxml)
+			dom = rootdom
 			icnt=1
 			for i in dom.getElementsByTagName('folder'):
 				foldername = dom.getElementsByTagName('folder')[icnt].getElementsByTagName('name')[0].toxml().replace('<name>', '').replace('</name>', '')
@@ -385,35 +379,9 @@ def shellhelper():
 		loop()
 		
 		
-	
-def fileurlchoices():
-	#the -1 is so that the list starts with 0
-	#done for consistency more than anything else
-	print_file_list(-1, True)
-	rawinput = raw_input("Which file to get URL for? (give the number)")
-	fileid = get_file_id(rawinput)
-	urls = get_file_url(fileid)
-	print("Download link: "+urls[0])
-	print("Direct Download link: "+urls[1])
-	#return to main loop?
-	loop()
-
-#this can later be modified to make more complex links with more complex thingys
-#needs to be changed so it returns the parsed out link...
-def get_file_url(fileid):
-	fileid = str(fileid)
-	url = "https://api.box.com/2.0/files/"+fileid+".xml"
-	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-	payload = "<shared_link><access>Open</access></shared_link>"
-	r = requests.request("PUT", url, None, parseString(payload).toxml(), headers)
-	#url and download-url
-	dom = parseString(r.content)
-	return [dom.getElementsByTagName('url')[0].toxml().replace('<url>', '').replace('</url>', ''), dom.getElementsByTagName('download-url')[0].toxml().replace('<download-url>', '').replace('</download-url>', '')]
-
 #says here that the sha1sum is optional for upload!
-##IT WORKS!!!!
 def upload(filepath, filename, folderid):
-	print("Uploading...")
+	helper.infoprint("Uploading...")
 	url = "https://api.box.com/2.0/files/content"
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 	payload = {'filename1': filename, 'folder_id': folderid}
@@ -445,13 +413,15 @@ def deletefilechoice():
 	
 	
 def deletefile(fileid):
-	sha1sum = get_sha1sum_remote(fileid)
-	url = "https://api.box.com/2.0/files/"+fileid
-	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-	payload = {'If-Match': sha1sum}
-	r = requests.request("DELETE", url, None, payload, headers)
-	print(r.content)
-	
+	try:
+		sha1sum = get_sha1sum_remote(fileid)
+		helper.varprint("Sha1sum of file to be deleted: "+sha1sum)
+		url = "https://api.box.com/2.0/files/"+fileid
+		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token, 'If-Match': sha1sum}
+		r = requests.request("DELETE", url, None, None, headers)
+		print(r.content)
+	except:
+		helper.infoprint('Something bad happened when deleting file...')
 	
 def deletefolderchoice():
 	#instead of -1 should be zero because of the all files thing in all directories
@@ -472,7 +442,7 @@ def deletefolder(folderid):
 	print(r.content)
 
 def get_all_file_id():
-	dom = parseString(rootxml)
+	dom = rootdom
 	cnt = int(dom.getElementsByTagName('total-count')[0].toxml().replace('<total-count>', '').replace('</total-count>', ''))
 	fileid={}
 	i=0
@@ -487,7 +457,7 @@ def get_all_file_id():
 
 def get_sha1sum_remote(fileid):
 	#slight modification of get_file_name or what ever it was 
-	dom = parseString(rootxml)
+	dom = rootdom
 	i=0
 	while i<=len(dom.getElementsByTagName('file')):
 		try:
@@ -520,7 +490,7 @@ def new_folder_choices():
 def folder_url_choices():
 	print_folder_list(0, True)
 	folderid = raw_input("Folder to make new link for: ")
-	urls = get_folder_url(get_folder_id(folderid))
+	urls = get_folder_url(get_folder_id(folderid), "folder")
 	print("Download URL: "+urls[0])
 	print("Direct(?) Download URL: "+urls[1]+ " (Pro account might be required)" )
 	loop()
@@ -528,14 +498,36 @@ def folder_url_choices():
 ## this will return url plus list of all files in the folder
 ## there's a download-url too (i thought that that was only for premium or pro i'm not sure which one it is)
 ## it will give you a 404 sorta error when you visit the download-url link...
-def get_folder_url(folderid):
-	url = "https://api.box.com/2.0/folders/"+folderid+".xml"
-	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-	payload = "<shared_link><access>Open</access></shared_link>"
-	r = requests.request("PUT", url, None, parseString(payload).toxml(), headers)
-	dom = parseString(r.content)
-	return [dom.getElementsByTagName('url')[0].toxml().replace('<url>', '').replace('</url>', ''), dom.getElementsByTagName('download-url')[0].toxml().replace('<download-url>','').replace('</download-url>','')]
-	
+def get_item_url(itemid, itemtype):
+	if(itemtype=="folder" or itemtype=="FOLDER"):
+		url = "https://api.box.com/2.0/folders/"+itemid+".xml"
+		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
+		payload = "<shared_link><access>Open</access></shared_link>"
+		r = requests.request("PUT", url, None, parseString(payload).toxml(), headers)
+		dom = parseString(r.content)
+		return [dom.getElementsByTagName('url')[0].toxml().replace('<url>', '').replace('</url>', ''), dom.getElementsByTagName('download-url')[0].toxml().replace('<download-url>','').replace('</download-url>','')]
+	elif(itemtype=="file" or itemtype=="FILE"):
+		itemid = str(itemid)
+		url = "https://api.box.com/2.0/files/"+itemid+".xml"
+		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
+		payload = "<shared_link><access>Open</access></shared_link>"
+		r = requests.request("PUT", url, None, parseString(payload).toxml(), headers)
+		dom = parseString(r.content)
+		return [dom.getElementsByTagName('url')[0].toxml().replace('<url>', '').replace('</url>', ''), dom.getElementsByTagName('download-url')[0].toxml().replace('<download-url>', '').replace('</download-url>', '')]
+
+
+def fileurlchoices():
+	#the -1 is so that the list starts with 0
+	#done for consistency more than anything else
+	print_file_list(-1, True)
+	rawinput = raw_input("Which file to get URL for? (give the number)")
+	fileid = get_file_id(rawinput)
+	urls = get_item_url(fileid, "file")
+	print("Download link: "+urls[0])
+	print("Direct Download link: "+urls[1])
+	#return to main loop?
+	loop()
+
 	
 #you have to send null value for the 'shared_link'!
 def rm_share_url_item(itemid, itemtype):
@@ -566,7 +558,7 @@ def rm_share_url_file_choices():
 	loop()	
 	
 def get_folder_name(fileid):
-	dom = parseString(rootxml)
+	dom = rootdom
 	i=0
 	while i<=len(dom.getElementsByTagName('folder')):
 		try:
@@ -587,15 +579,22 @@ def rename_file_choices():
 	filename = raw_input("New name for file: ")
 	if filename=='q' or filename=='Q':
 		return
-	rename_file(filename, fileid)	
+	rename_file(filename, fileid, "file")	
 	loop()
 	
-def rename_file(newname, fileid):
-	url = "https://api.box.com/2.0/files/"+fileid
-	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-	payload = {'name': newname}
-	r = requests.request("PUT", url, None, json.dumps(payload), headers)
-	return r.content
+def rename_item(newname, itemid, itemtype):
+	if(itemtype=="file" or itemtype=="FILE"):
+		url = "https://api.box.com/2.0/files/"+itemid
+		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
+		payload = {'name': newname}
+		r = requests.request("PUT", url, None, json.dumps(payload), headers)
+		return r.content
+	elif(itemtype=="folder" or itemtype=="FOLDER"):
+		url = "https://api.box.com/2.0/folders/"+itemid
+		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
+		payload = {'name': newname}
+		r = requests.request("PUT", url, None, json.dumps(payload), headers)
+		return r.content
 	
 def rename_folder_choices():
 	print_folder_list(0, True)
@@ -605,15 +604,18 @@ def rename_folder_choices():
 	foldername = raw_input("New name for folder: ")
 	if foldername=='q' or foldername=='Q':
 		return
-	rename_folder(foldername, folderid)	
+	rename_item(foldername, folderid, "folder")	
 	loop()
-	
-def rename_folder(newname, folderid):
-	url = "https://api.box.com/2.0/folders/"+folderid
-	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-	payload = {'name': newname}
-	r = requests.request("PUT", url, None, json.dumps(payload), headers)
-	return r.content
+
+##works!
+def get_file_name_list():
+	dom = rootdom
+	i=0
+	filenames={}
+	for filename in dom.getElementsByTagName('file'):
+		filenames[i] = dom.getElementsByTagName('file')[i].getElementsByTagName('name')[0].toxml().replace('<name>','').replace('</name>','')
+		i+=1
+	return filenames
 
 
 ########################################################################
@@ -648,11 +650,6 @@ def ls():
 def list_items_shared():
 	print_file_list(print_folder_list(0, True), False)
 	loop()
-	
-def firstrun():
-	return os.path.exists('~/.boxlinux')
-
-
 
 ########################################################################
 #######################HELPER METHODS###################################
@@ -660,15 +657,7 @@ def firstrun():
 #reason to change or update
 
 def test():
-	get_info_item(445859823, "folder")
-	
-def get_sha1sum_local(filepath):
-	f = open(filepath, 'r')
-	string = f.read()
-	#must be string or buffer not file
-	sha1sum = hashlib.sha1()
-	sha1sum.update(string)
-	return sha1sum.hexdigest()
+	helper.infoprint(file_id_from_name('BossRemembers'))
 	
 def get_local_files():
 	return os.listdir(os.getcwd())
