@@ -306,7 +306,7 @@ def shellhelper():
 	elif command=='-V' or command=='-version':
 		print('Version 0.0.0.1')
 	elif command=='ls':
-		print_file_list(print_folder_list(0, False))
+		ls()
 	elif command=='-u' or command=='--upload':
 		upload(os.getcwd()+"/"+sys.argv[2], sys.argv[2], 0)
 	elif command=='-d':
