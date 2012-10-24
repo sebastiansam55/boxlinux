@@ -1,36 +1,15 @@
 #!/usr/bin/env python
-##Right now this was written/run/tested with python 2.7
-##every once in a while i'll run it with python 3 to see if they are still both working
-##last time I did it was (10/21/2012)
-##another things to do it to take all of the times I've used rawinput as a variable and put more sensible names
-
-##I am also very inconsistent i sometimes do get_file_name or downloadchoices or deleteFile i don't have a preference if someone wants to do all that work ;)
-
-#<3 XML!
 from xml.dom.minidom import parseString
-#This is used for the command line version of the program
-#this is what I'm using atm instead of something like optparse
 import sys
-#for checking for file exsistance
-#also creating folders
 import os
-#for the response from the BOX APIS
 import json
-#hopefully the solution to all my problems
-#this is literally the best module that I have ever used
 import requests
-
-##helper methods!
-import helper
-
-
-#do globals have to be declared outside of methods?
+import helper		##user made
 #BoxyLinux API-KEY
 global apikey
 apikey = "l7c2il3sxmetf2ielkyxbvc2k4nqqkm4"
 #change this whenever change folders
 global rootdom
-
 
 def main():
 	if int(len(sys.argv))==1:
@@ -110,27 +89,22 @@ def loop():
 		test()
 	else:
 		loop()
-		
 
-#not actually ~authenticating~ more like preping to authenticate	
 def authenticate():
 	r = requests.get("https://www.box.com/api/1.0/rest?action=get_ticket&api_key="+apikey)
 	xml = r.content
 	dom = parseString(xml)
 	ticket = dom.getElementsByTagName('ticket')[0].toxml()
-	#gets rid of the XML tags!
 	ticket = ticket.replace('<ticket>', '').replace("</ticket>","")
 	return ticket
 	
 def load_settings():
-	#the ~/ DOES NOT WORK, should substutie something else like a $USER
 	f = open('/home/sam/.boxlinux', 'r')
 	global auth_token
 	auth_token = f.readline()
 	f.close()
 	
 def save_auth_token():
-	#the ~/ DOES NOT WORK, should substutie something else like a $USER
 	f = open('/home/sam/.boxlinux', 'w')
 	f.write(auth_token)
 	f.close()
@@ -142,7 +116,6 @@ def get_auth_token(ticket):
 	dom = parseString(xml)	
 	global auth_token
 	auth_token = dom.getElementsByTagName('auth_token')[0].toxml()
-	#get rid of those nasty XML tags!
 	auth_token = auth_token.replace('<auth_token>', '').replace("</auth_token>", "")
 	save_auth_token()
 
@@ -150,18 +123,11 @@ def get_auth_token(ticket):
 def get_folder_list(folderid):
 	url = "https://api.box.com/2.0/folders/"+str(folderid)+".xml"
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-	#root folder of the BOX account is refered to as "0" 
-	#appending .xml to the end of requests will make the API return XML!
 	r = requests.request("GET", url, None, None, headers)
 	return r.content
-	
-	
-	#where path will usually be ~/Box
-	#should also have ability to read option from file
+
 def foldercraft(path):
-	#I *think* that this will check for both exsisteance of file and folder?
 	if not os.path.exists(path):
-		#this might be the right way?
 		os.makedirs(path)
 	else:
 		print("Folder already exists")
@@ -169,19 +135,12 @@ def foldercraft(path):
 		
 def print_folder_list(itemcnt, showshare):
 	itemcnt = int(itemcnt)
-	#this will be BIG method!
-	#how will this work as a daemon??
 	dom = rootdom
-	#number of items in the folder
-	#should this be in it's own method?
-	#the two .replace-s should be in their own method!
 	i=0
 	bol = True
 	sharebool = False
-	#maybe but in another method and then have a while true with return?
 	print("FOLDERS:")
 	while bol:
-		#folder 0 is root in the XML
 		try:
 			nameoffolder = dom.getElementsByTagName('folder')[i].getElementsByTagName('name')[0].toxml().replace('<name>', '').replace('</name>', '')
 			folderid = dom.getElementsByTagName('folder')[i].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
@@ -234,9 +193,7 @@ def print_file_list(itemcnt, showshare):
 			bol=False
 	
 def download_choices():
-	#itemcnt = print_folder_list(itemcnt)-1
 	print_file_list(-1, False)
-	#have to convert to int after command_check in case it's a char or string
 	print("Select 'all' to download all of the files listed")
 	dlchoice = raw_input("Select a file to download: ")
 	if command_check(dlchoice):
@@ -246,17 +203,9 @@ def download_choices():
 		download_all(fileids)
 	else:
 		download(int(dlchoice))
-	##return to main loop?
 	loop()
-	
-##the /content!
+
 def download(filenumber):
-	#BOX API reference refers to /content?version=numberhere i have no idea where that number comes from
-	#I assume that it has to do with the way that BOX does multiple versions of the file
-	#I have no idea if it is necessary tho
-	#no need to append the .xml, nothing but the file will be returned here
-	#remember the comma at the end!
-	fileid = ""
 	fileid = str(get_file_id(filenumber))
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 	url = "https://api.box.com/2.0/files/"+fileid+"/content"
@@ -293,7 +242,6 @@ def get_file_name(fileid):
 				i=i+1
 		except:
 			return
-	#nameofitem = dom.getElementsByTagName('file')[filenumber].getElementsByTagName('name')[0].toxml().replace('<name>', '').replace('</name>', '')
 	return nameofitem
 	
 def get_file_id(filelistno):
@@ -607,7 +555,6 @@ def rename_folder_choices():
 	rename_item(foldername, folderid, "folder")	
 	loop()
 
-##works!
 def get_file_name_list():
 	dom = rootdom
 	i=0
@@ -617,17 +564,12 @@ def get_file_name_list():
 		i+=1
 	return filenames
 
-
 ########################################################################
-############################WORKING METHODS#############################
-#See description of helper methods
-#exactly the same except these are mostly mission critical
-	
+############################WORKING METHODS#############################	
 def download_all(file_list):
 	for i in file_list:
-		#varprint(file_list[i])
 		download_fileid(file_list[i])
-		
+
 def get_info_item(itemid, itemtype):
 	if itemtype=="folder" or itemtype=="FOLDER":
 		url = "https://api.box.com/2.0/folders/"+str(itemid)+".xml"
@@ -643,35 +585,22 @@ def get_info_item(itemid, itemtype):
 def ls():
 	print_file_list(print_folder_list(-1, False), False)
 	loop()
-	
-	
-##this is for when I go back and take out the parsing the prints that slows it down
-##will make it some config option
+
 def list_items_shared():
 	print_file_list(print_folder_list(0, True), False)
 	loop()
 
 ########################################################################
 #######################HELPER METHODS###################################
-#these are generally small methods that work as they and I have no
-#reason to change or update
-
 def test():
 	helper.infoprint(file_id_from_name('BossRemembers'))
 	
 def get_local_files():
-	return os.listdir(os.getcwd())
-	
+	return os.listdir(os.getcwd())	
 ########################################################################
-##########!!!!!!!!!!!!!!!!!!!!
-#don't put anything below this; python will stop loading stuff once it gets to this!
 if __name__ == '__main__':
 	main()
 
-
-		
-		
-	
 """
     BoxLinux; Bringing Box services to the Linux desktop
     Copyright (C) 2012  Sam Sebastian
