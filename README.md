@@ -11,6 +11,10 @@ The only problem that I have run into with trying to run it is that python3.2 (o
 
 ## Current Capabities:
 
+* Selection of folders and files based off of filenames 
+
+	* Download
+
 * Authentication (through BOX v1 API)
 
 * Interactive mode
