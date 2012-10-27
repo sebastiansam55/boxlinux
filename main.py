@@ -5,6 +5,7 @@ import os
 import json
 import requests
 import helper		##user made
+import delete
 #BoxyLinux API-KEY
 global apikey
 apikey = "l7c2il3sxmetf2ielkyxbvc2k4nqqkm4"
@@ -125,12 +126,6 @@ def get_folder_list(folderid):
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 	r = requests.request("GET", url, None, None, headers)
 	return r.content
-
-def foldercraft(path):
-	if not os.path.exists(path):
-		os.makedirs(path)
-	else:
-		print("Folder already exists")
 		
 		
 def print_folder_list(itemcnt, showshare):
@@ -201,6 +196,8 @@ def download_choices():
 	elif str(dlchoice)=="all" or str(dlchoice)=="ALL":
 		fileids = get_all_file_id()
 		download_all(fileids)
+	elif in_list(str(dlchoice), get_file_name_list()):
+		download_fileid(file_id_from_name(dlchoice))
 	else:
 		download(int(dlchoice))
 	loop()
@@ -271,6 +268,9 @@ def cdchoices():
 	cdto = raw_input("Which folder to cd to?")
 	if command_check(cdto):
 		return
+	elif in_list(cdto, get_file_name_list()):
+		##need a method to get folderid from name
+		rootdom=parseString(get_folder_list(
 	rootdom = parseString(get_folder_list(get_folder_id(int(cdto))))
 	itemcnt = print_folder_list(0, False)
 	print_file_list(int(itemcnt), False)
@@ -319,7 +319,7 @@ def shellhelper():
 			icnt=1
 			for i in dom.getElementsByTagName('folder'):
 				foldername = dom.getElementsByTagName('folder')[icnt].getElementsByTagName('name')[0].toxml().replace('<name>', '').replace('</name>', '')
-				foldercraft("./"+foldername)
+				helper.foldercraft("./"+foldername)
 				icnt = icnt+1
 		except:
 			helper.errprint("You might be okay...")
@@ -564,6 +564,42 @@ def get_file_name_list():
 		i+=1
 	return filenames
 
+def filename_choices(filenamelist):
+	i=0
+	for filename in filenamelist:
+		print(filenamelist[i])
+		i+=1
+		
+def in_list(choice, filenamelist):
+	i=0
+	for filename in filenamelist:
+		if(filenamelist[i]==choice):
+			return True
+		else:
+			i+=1
+			
+			
+			
+##where itemid is the id, folder or file
+##where getthis is the thing you are getting
+##and where fromthis is a 'folder' or 'file' string
+def uni_get_id(itemid, getthis, fromthis):
+	dom = rootdom
+	i=0
+	while i<=len(dom.getElementsByTagName(fromthis)):
+		try:
+			if dom.getElementsByTagName(fromthis)[i].getElementsByTagName('id')[0].toxml().replace('<id>','').replace('</id>','')==itemid:
+				nameofitem = dom.getElementsByTagName(fromthis)[i].getElementsByTagName(getthis)[0].toxml().replace('<'+getthis+'>', '').replace('</'+getthis+'>', '')
+				return iteminfo
+			else:
+				i=i+1
+		except:
+			return
+	return iteminfo
+	
+def uni_get_name(itemname, getthis, fromthis):
+	break
+
 ########################################################################
 ############################WORKING METHODS#############################	
 def download_all(file_list):
@@ -594,6 +630,7 @@ def list_items_shared():
 #######################HELPER METHODS###################################
 def test():
 	helper.infoprint(file_id_from_name('BossRemembers'))
+	filename_choices(get_file_name_list())
 	
 def get_local_files():
 	return os.listdir(os.getcwd())	
