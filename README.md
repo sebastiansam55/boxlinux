@@ -1,4 +1,4 @@
-boxlinux Version 0.0.0.1
+boxlinux
 ========
 
 Bringing Box to the Linux desktop
