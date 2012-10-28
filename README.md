@@ -1,4 +1,4 @@
-boxlinux
+boxlinux Version 0.0.0.1
 ========
 
 Bringing Box to the Linux desktop
@@ -13,7 +13,7 @@ The only problem that I have run into with trying to run it is that python3.2 (o
 
 * Selection of folders and files based off of filenames 
 
-	* Download
+	* All as far as I have tested
 
 * Authentication (through BOX v1 API)
 
@@ -23,11 +23,10 @@ The only problem that I have run into with trying to run it is that python3.2 (o
 	
 * Upload (to root dir)
 	
-* Download (from any folder)
+* Download (from any folder (using the cd command))
 	
 	* Download all files in folder!
 	
-		
 * Listing all files in root dir and other dirs (on box)
 	
 * Create shareable links for files
