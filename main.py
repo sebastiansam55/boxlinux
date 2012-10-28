@@ -20,9 +20,9 @@ shareurl = '&auth_token=YOURAUTH_TOKENHERE'
 
 ##need some way for this is be set from the file settings
 
-##################	Set to true for short URLS
+##########################	Set to true for short URLS
 bitly_enabled = False 	##	Set to false if you don't have an account
-##################	or just don't want short urls
+##########################	or just don't want short urls
 
 
 #change this whenever change folders
@@ -119,6 +119,10 @@ def load_settings():
 	f = open(os.getenv("HOME")+'/.boxlinux', 'r')
 	global auth_token
 	auth_token = str(f.readline())
+	if(bitly_enabled):
+		f.readline()
+		f.readline()
+		
 	f.close()
 	
 def save_auth_token():
