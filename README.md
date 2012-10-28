@@ -9,6 +9,11 @@ To use this tool (in it's current state) add it into your BIN, I recommend makin
 Right now this is only officially supported for python 2.7 (developed and tested) but it should be mostly compatible with python 3 and newer versions.
 The only problem that I have run into with trying to run it is that python3.2 (on ubuntu 12.04) does not install python-requests to the python3.2 libs or whatever.
 
+If you want to be able to use the bitly feature, as of it's implementation right now you have to put in the "Legacy API Key" that you can get in your bitly settings and paste it into the *2nd* line in your .boxlinux settings file.
+
+Okay so I just spent literally an entire day working on the Share link feature, I don't know what happened to it, but some how it got broken and now the only way to make it work is if you hard code the authtoken into the Authorization header.
+I have literally no idea why this happened but I have not yet found a way to fix it. To enable it you need to set 'share' to True and put the authtoken (the first line in your settings file (~/.boxlinux)) into the shareurl variable where it says "YOURAUTHTOKENHERE" leave the rest of the variable as is.
+
 ## Current Capabities:
 
 * Selection of folders and files based off of filenames 
@@ -30,6 +35,8 @@ The only problem that I have run into with trying to run it is that python3.2 (o
 * Listing all files in root dir and other dirs (on box)
 	
 * Create shareable links for files
+
+	* Will also return bit.ly shortened links for files (if enabled)
 	
 * Saves settings to ~/.boxlinux (only setting atm is the auth token from BOX's API)
 
@@ -42,8 +49,6 @@ The only problem that I have run into with trying to run it is that python3.2 (o
 ## Planned Features:
 
 * Option to shorten all URLS returned (either goo.gl, bit.ly or maybe both)
-
-* Selection of folders and files based off of filenames 
 
 * Automatic "Syncing"
 	
@@ -86,6 +91,8 @@ This documentation is aboslutely atrocious (in my opinion) I mean it looks nice,
 
 [Requests documentation] (http://docs.python-requests.org/en/latest/api/)
 
-[Bit.ly URL shortening Service] (http://dev.bitly.com/api.html) (Not yet implemented!)
+[Bit.ly URL shortening Service] (http://dev.bitly.com/api.html) (A work in progress)
+
+[Bit.ly API Key] (http://bitly.com/a/your_api_key)
 
 I have choosen, because of my familarness with XML that all the responses from the BOX API should be requested in XML format, now that I've used JSON a bit, I might convert everything over sometime or other

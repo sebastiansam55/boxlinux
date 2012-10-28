@@ -4,10 +4,27 @@ import sys
 import os
 import json
 import requests
+from os.path import expanduser
+import requests.auth
+##user made
 import helper
 import delete
+import bitlyshortener as bitly
 #BoxyLinux API-KEY
 apikey = "l7c2il3sxmetf2ielkyxbvc2k4nqqkm4"
+##doing it like this will enable crossplatform (windows) support
+HOME = expanduser("~")
+
+share = False
+shareurl = '&auth_token=YOURAUTH_TOKENHERE'
+
+##need some way for this is be set from the file settings
+
+##################	Set to true for short URLS
+bitly_enabled = False 	##	Set to false if you don't have an account
+##################	or just don't want short urls
+
+
 #change this whenever change folders
 global rootdom
 
@@ -99,13 +116,13 @@ def authenticate():
 	return ticket
 	
 def load_settings():
-	f = open('/home/sam/.boxlinux', 'r')
+	f = open(os.getenv("HOME")+'/.boxlinux', 'r')
 	global auth_token
-	auth_token = f.readline()
+	auth_token = str(f.readline())
 	f.close()
 	
 def save_auth_token():
-	f = open('/home/sam/.boxlinux', 'w')
+	f = open(os.getenv("HOME")+'/.boxlinux', 'w')
 	f.write(auth_token)
 	f.close()
 	
@@ -439,42 +456,61 @@ def new_folder_choices():
 	loop()
 	
 def folder_url_choices():
-	print_folder_list(-1, True)
-	folderid = raw_input("Folder to make new link for: ")
-	if(in_list(folderid, get_item_name_list("folder"))):
-		urls = get_item_url(uni_get_name(folderid, "id", "folder"))
+	if(share):
+		print_folder_list(-1, True)
+		folderid = raw_input("Folder to make new link for: ")
+		if(in_list(folderid, get_item_name_list("folder"))):
+			urls = get_item_url(uni_get_name(folderid, "id", "folder"))
+		else:
+			urls = get_item_url(get_folder_id(folderid), "folder")
+		print("Download URL: "+urls[0])
+		if(bitly_enabled):
+			print("\t"+bitly.shorten_url(urls[0]))
+		print("Direct(?) Download URL: "+urls[1]+ " (Pro account might be required)" )
+		if(bitly_enabled):
+			print("\t"+bitly.shorten_url(urls[1]))
+		loop()
 	else:
-		urls = get_item_url(get_folder_id(folderid), "folder")
-	print("Download URL: "+urls[0])
-	print("Direct(?) Download URL: "+urls[1]+ " (Pro account might be required)" )
-	loop()
-
+		print("Read the readme for info on how to set this function up")
+		
 def get_item_url(itemid, itemtype):
-	if(itemtype=="folder" or itemtype=="FOLDER"):
+	if itemtype=="folder" or itemtype=="FOLDER":
 		url = "https://api.box.com/2.0/folders/"+itemid
-		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
+		headers = {'Authorization' : 'BoxAuth api_key='+apikey+shareurl,}
 		payload = {'shared_link': {'access': 'Open'}}
 		r = requests.request("PUT", url, None, json.dumps(payload), headers)
+		print r.content
 		rtrnval = json.loads(r.content)
-		return [rtrnval['shared_link']['url'], rtrnval['shared_link']['download_url']]	
-	elif(itemtype=="file" or itemtype=="FILE"):
+		return [rtrnval['shared_link']['url'], rtrnval['shared_link']['download_url']]
+	elif itemtype=="file" or itemtype=="FILE":
 		url = "https://api.box.com/2.0/files/"+itemid
-		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-		payload = {'shared_link': {'access': 'Open'}}
-		r = requests.request("PUT", url, None, json.dumps(payload), headers)
+		headers = {'content-type': 'application/json', 'Authorization': 'BoxAuth api_key='+apikey+shareurl}
+		payload = {'shared_link': {'access':'Open'}}
+		r = requests.put(url, data=json.dumps(payload), headers=headers)
+		print r.content
 		rtrnval = json.loads(r.content)
-		return [rtrnval['shared_link']['url'], rtrnval['shared_link']['download_url']]	
+		return [rtrnval['shared_link']['url'],rtrnval['shared_link']['download_url']]
+
+
+
 
 def fileurlchoices():
-	print_file_list(-1, True)
-	fileurl = raw_input("Which file to get URL for? (give the number)")
-	if(in_list(fileurl, get_item_name_list("file"))):
-		urls = get_item_url(uni_get_name(fileurl, "id", "file"), "file")
+	if(share):
+		print_file_list(-1, True)
+		fileurl = raw_input("Which file to get URL for? (give the number)")
+		if(in_list(fileurl, get_item_name_list("file"))):
+			urls = get_item_url(uni_get_name(fileurl, "id", "file"), "file")
+		else:
+			urls = get_item_url(get_file_id(fileurl), "file")
+		print("Download link: "+urls[0])
+		if(bitly_enabled):
+			print("\t"+bitly.shorten_url(urls[0]))
+		print("Direct Download link: "+urls[1])
+		if(bitly_enabled):
+			print("\t"+bitly.shorten_url(urls[1]))
+		loop()
 	else:
-		urls = get_item_url(get_file_id(rawinput), "file")
-	print("Download link: "+urls[0])
-	print("Direct Download link: "+urls[1])
-	loop()
+		print("Read the readme for info on how to set this function up")
 	
 
 def rm_share_url_item(itemid, itemtype):
@@ -485,10 +521,12 @@ def rm_share_url_item(itemid, itemtype):
 		r = requests.request("PUT", url, None, json.dumps(payload), headers)
 		return r.content
 	elif itemtype=="file" or itemtype=="FILE":
-		url = "https://api.box.com/2.0/files/"+itemid
+		#url = "https://api.box.com/2.0/files/"+itemid
+		url = "http://httpbin.org/put"
 		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 		payload = {'shared_link': None}
 		r = requests.request("PUT", url, None, json.dumps(payload), headers)
+		print r.content
 		return r.content
 		
 	
@@ -498,7 +536,7 @@ def rm_share_url_folder_choices():
 	if(in_list(unsharethis, get_item_name_list("folder"))):
 		rm_share_url_item(uni_get_name(unsharethis, "id", "folder"), "FOLDER")
 	else:
-		rm_share_url_item(get_folder_id(rawinput), "folder")
+		rm_share_url_item(get_folder_id(unsharethis), "folder")
 	loop()
 	
 def rm_share_url_file_choices():
@@ -648,7 +686,13 @@ def list_items_shared():
 ########################################################################
 #######################HELPER METHODS###################################
 def test():
-	upload(os.getcwd()+"/sync", "sync", 445859823)
+    url = 'http://httpbin.org/put'
+    payload = {'test': 'data'}
+    print str(auth_token)==auth_token
+    auth = '&auth_token=zfdv5b6kfmijfn6iupv9hfv9v547wh0h'
+    headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token} #+auth_token+" "}
+    r = requests.put(url=url, data=json.dumps(payload), headers=headers)
+    print r.content
 def get_local_files():
 	return os.listdir(os.getcwd())	
 ########################################################################
