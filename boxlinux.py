@@ -6,27 +6,23 @@ import json
 import requests
 from os.path import expanduser
 import requests.auth
-##user made
 import helper
 import delete
+import googlshortner as googl
 import bitlyshortener as bitly
-import googlshortener as googl
-#BoxyLinux API-KEY
 apikey = "l7c2il3sxmetf2ielkyxbvc2k4nqqkm4"
-##doing it like this will enable crossplatform (windows) support
 HOME = expanduser("~")
 
 share = False
 shareurl = '&auth_token=YOURAUTH_TOKENHERE'
-
-##need some way for this is be set from the file settings
-
 ##########################	Set to true for short URLS
 bitly_enabled = False 	##	Set to false if you don't have an account
 ##########################	or just don't want short urls
 
+##########################
+googl_enabled = False	##
+##########################
 
-#change this whenever change folders
 global rootdom
 
 def main():
@@ -72,7 +68,6 @@ def loop():
 	print("\t10. Rename a File")
 	print("\t11. Rename a Folder")
 	print("\t12. List Files in Current Dir") 
-	print("\t-1. Test Method")
 	command = raw_input("What would you like to do?")
 	if command_check(command):
 		return
@@ -103,8 +98,6 @@ def loop():
 		rename_folder_choices()
 	elif command==12:
 		ls()
-	elif command==-1:
-		test()
 	else:
 		loop()
 
@@ -330,8 +323,7 @@ def shellhelper():
 		except:
 			helper.errprint("You might be okay...")
 	else:
-		return
-		
+		return		
 		
 def upload(filepath, filename, folderid):
 	helper.infoprint("Uploading...")
@@ -345,7 +337,6 @@ def upload(filepath, filename, folderid):
 		return
 	r = requests.request("POST", url, None, payload, headers, None, data)
 	print(r.content)
-	
 	
 def uploadchoices():
 #lists files in folder of place where command was invoked
@@ -380,8 +371,7 @@ def deletefilechoice():
 		fileid = get_file_id(dlfile)
 		deletefile(fileid)
 	update_dom(0)
-	loop()
-	
+	loop()	
 	
 def deletefile(fileid):
 	try:
@@ -439,9 +429,7 @@ def get_sha1sum_remote(fileid):
 			else:
 				i=i+1
 		except:
-			return
-			
-			
+			return		
 			
 def mk_new_folder(foldername, parent_folderid):
 	#where folderid is the folder that the new folder is going to be created in ?
@@ -499,10 +487,7 @@ def get_item_url(itemid, itemtype):
 		print r.content
 		rtrnval = json.loads(r.content)
 		return [rtrnval['shared_link']['url'],rtrnval['shared_link']['download_url']]
-
-
-
-
+		
 def fileurlchoices():
 	if(share):
 		print_file_list(-1, True)
@@ -512,14 +497,10 @@ def fileurlchoices():
 		else:
 			urls = get_item_url(get_file_id(fileurl), "file")
 		print("Download link: "+urls[0])
-		if(googl_enabled):
-			print("\t"+googl.shorten_url(urls[0]))
-		elif(bitly_enabled):
+		if(bitly_enabled):
 			print("\t"+bitly.shorten_url(urls[0]))
 		print("Direct Download link: "+urls[1])
-		if(googl_enabled):
-			print("\t"+googl.shorten_url(urls[1]))
-		elif(bitly_enabled):
+		if(bitly_enabled):
 			print("\t"+bitly.shorten_url(urls[1]))
 		loop()
 	else:
@@ -540,8 +521,7 @@ def rm_share_url_item(itemid, itemtype):
 		payload = {'shared_link': None}
 		r = requests.request("PUT", url, None, json.dumps(payload), headers)
 		print r.content
-		return r.content
-		
+		return r.content		
 	
 def rm_share_url_folder_choices():
 	print_folder_list(-1, True)
@@ -622,9 +602,7 @@ def in_list(choice, filenamelist):
 			return True
 		else:
 			i+=1
-	return False
-
-			
+	return False		
 			
 def uni_get_id(itemid, getthis, itemtype):
 	dom = rootdom
@@ -669,9 +647,7 @@ def sync():
 			helper.varprint(fileid)
 			download_fileid(fileid)
 			k+=1
-
-########################################################################
-############################WORKING METHODS#############################	
+	
 def download_all(file_list):
 	for i in file_list:
 		download_fileid(file_list[i])
@@ -696,19 +672,8 @@ def list_items_shared():
 	print_file_list(print_folder_list(0, True), False)
 	loop()
 
-########################################################################
-#######################HELPER METHODS###################################
-def test():
-    url = 'http://httpbin.org/put'
-    payload = {'test': 'data'}
-    print str(auth_token)==auth_token
-    auth = '&auth_token=zfdv5b6kfmijfn6iupv9hfv9v547wh0h'
-    headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token} #+auth_token+" "}
-    r = requests.put(url=url, data=json.dumps(payload), headers=headers)
-    print r.content
 def get_local_files():
 	return os.listdir(os.getcwd())	
-########################################################################
 if __name__ == '__main__':
 	main()
 
@@ -730,12 +695,3 @@ if __name__ == '__main__':
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-
-
-"""
-Dependincies:
-python-requests
-	in the ubuntu repos it only installs the version for 2.7
-	looking for fix for python3.2 now...
-python2.7 (duh!)
-"""
