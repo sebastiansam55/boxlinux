@@ -144,8 +144,7 @@ def get_auth_token(ticket):
 
 def get_folder_list(folderid):
 	url = "https://api.box.com/2.0/folders/"+str(folderid)+".xml"
-	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-	r = requests.request("GET", url, None, None, headers)
+	r = requests.get(url, headers={'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,})
 	return r.content
 		
 		
@@ -699,13 +698,10 @@ def list_items_shared():
 ########################################################################
 #######################HELPER METHODS###################################
 def test():
-    url = 'http://httpbin.org/put'
-    payload = {'test': 'data'}
-    print str(auth_token)==auth_token
-    auth = '&auth_token=zfdv5b6kfmijfn6iupv9hfv9v547wh0h'
-    headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token} #+auth_token+" "}
-    r = requests.put(url=url, data=json.dumps(payload), headers=headers)
-    print r.content
+    #get_folder_list(0);
+	print_folder_list(-1, False)
+
+
 def get_local_files():
 	return os.listdir(os.getcwd())	
 ########################################################################
