@@ -226,7 +226,7 @@ def download(filenumber):
 	fileid = str(get_file_id(filenumber))
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 	url = "https://api.box.com/2.0/files/"+fileid+"/content"
-	r = requests.request("GET", url, None, headers)
+	r = requests.request("GET", url=url, None, headers=headers)
 	helper.infoprint("Downloading...")
 	filerecieved = r.content
 	#this will be replaced with a file write method idealy
@@ -240,7 +240,7 @@ def download_fileid(fileid):
 	fileid=str(fileid)
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 	url = "https://api.box.com/2.0/files/"+fileid+"/content"
-	r = requests.request("GET", url, None, headers)
+	r = requests.request("GET", url=url, None, headers=headers)
 	filedata = r.content
 	filename = uni_get_id(fileid, "name", "file")
 	f = open(filename, 'w')
@@ -342,7 +342,7 @@ def upload(filepath, filename, folderid):
 	except:
 		helper.errprint("File selected is not a file or other error")
 		return
-	r = requests.request("POST", url, None, payload, headers, None, data)
+	r = requests.request("POST", url=url, None, payload, headers=headers, None, data=data)
 	print(r.content)
 	
 	
@@ -388,7 +388,7 @@ def deletefile(fileid):
 		helper.varprint("Sha1sum of file to be deleted: "+sha1sum)
 		url = "https://api.box.com/2.0/files/"+fileid
 		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token, 'If-Match': sha1sum}
-		r = requests.request("DELETE", url, None, None, headers)
+		r = requests.request("DELETE", url=url, None, None, headers=headers)
 		print(r.content)
 	except:
 		helper.infoprint('Something bad happened when deleting file...')
@@ -409,7 +409,7 @@ def deletefolder(folderid):
 	url = "https://api.box.com/2.0/folders/"+str(folderid)+"?recurive=true"
 	#varprint(url)
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-	r = requests.request("DELETE", url, None, None, headers)
+	r = requests.request("DELETE", url=url, None, None, headers=headers)
 	print(r.content)
 
 def get_all_file_id():
@@ -447,7 +447,7 @@ def mk_new_folder(foldername, parent_folderid):
 	url = "https://api.box.com/2.0/folders/"
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 	payload = {'name': ''+foldername+'', 'parent': {'id': '0'}}
-	r = requests.request("POST", url, None, json.dumps(payload), headers)
+	r = requests.request("POST", url=url, None, json.dumps(payload), headers=headers)
 	return r.content
 	
 def new_folder_choices():
