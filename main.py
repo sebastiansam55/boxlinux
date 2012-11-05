@@ -14,7 +14,7 @@ import googlshortener as googl
 #BoxyLinux API-KEY
 apikey = "l7c2il3sxmetf2ielkyxbvc2k4nqqkm4"
 ##doing it like this will enable crossplatform (windows) support
-home_path = expanduser("~")
+HOME = expanduser("~")
 
 share = False
 shareurl = '&auth_token=YOURAUTH_TOKENHERE'
@@ -25,16 +25,7 @@ shareurl = '&auth_token=YOURAUTH_TOKENHERE'
 bitly_enabled = False 	##	Set to false if you don't have an account
 ##########################	or just don't want short urls
 
-##########################
-googl_enabled = False   ##
-##########################
-#The OS of the current computer; change paths accordingly
-OS = sys.platform
-global settings_filepath
-if(OS=="win32"):
-	windows = True
-else:
-	windows = False
+
 
 #change this whenever change folders
 global rootdom
@@ -42,7 +33,8 @@ global rootdom
 def main():
 	if int(len(sys.argv))==1:
 		if not os.path.exists('~/.boxlinux'):
-			yorn = raw_input("Have you approved this app for use? [Y/n/Q]: ")
+			print("Have you approved this app for use? [Y/n/Q]")
+			yorn = raw_input()
 			if yorn=='Y'or yorn=='y':			
 				print("Loading Settings")
 				load_settings()
@@ -126,7 +118,7 @@ def authenticate():
 	return ticket
 	
 def load_settings():
-	f = open(home_path+'/.boxlinux', 'r')
+	f = open(os.getenv("HOME")+'/.boxlinux', 'r')
 	global auth_token
 	auth_token = str(f.readline())
 	if(bitly_enabled):
@@ -136,7 +128,7 @@ def load_settings():
 	f.close()
 	
 def save_auth_token():
-	f = open(home_path+'/.boxlinux', 'w')
+	f = open(os.getenv("HOME")+'/.boxlinux', 'w')
 	f.write(auth_token)
 	f.close()
 	
@@ -235,7 +227,7 @@ def download(filenumber):
 	fileid = str(get_file_id(filenumber))
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 	url = "https://api.box.com/2.0/files/"+fileid+"/content"
-	r = requests.request("GET", url=url, None, headers=headers)
+	r = requests.get(url=url, headers=headers)
 	helper.infoprint("Downloading...")
 	filerecieved = r.content
 	#this will be replaced with a file write method idealy
@@ -249,7 +241,7 @@ def download_fileid(fileid):
 	fileid=str(fileid)
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 	url = "https://api.box.com/2.0/files/"+fileid+"/content"
-	r = requests.request("GET", url=url, None, headers=headers)
+	r = requests.get(url=url, headers=headers)
 	filedata = r.content
 	filename = uni_get_id(fileid, "name", "file")
 	f = open(filename, 'w')
@@ -341,17 +333,17 @@ def shellhelper():
 		return
 		
 		
-def upload(file_path, filename, folderid):
+def upload(filepath, filename, folderid):
 	helper.infoprint("Uploading...")
 	url = "https://api.box.com/2.0/files/content"
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 	payload = {'filename1': filename, 'folder_id': folderid}
 	try:
-		data = {filename: open(file_path, 'r')}
+		data = {filename: open(filepath, 'r')}
 	except:
 		helper.errprint("File selected is not a file or other error")
 		return
-	r = requests.request("POST", url=url, None, payload, headers=headers, None, data=data)
+	r = requests.post(url=url, data=payload, headers=headers, files=data)
 	print(r.content)
 	
 	
@@ -397,7 +389,7 @@ def deletefile(fileid):
 		helper.varprint("Sha1sum of file to be deleted: "+sha1sum)
 		url = "https://api.box.com/2.0/files/"+fileid
 		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token, 'If-Match': sha1sum}
-		r = requests.request("DELETE", url=url, None, None, headers=headers)
+		r = requests.delete(url=url, headers=headers)
 		print(r.content)
 	except:
 		helper.infoprint('Something bad happened when deleting file...')
@@ -418,7 +410,7 @@ def deletefolder(folderid):
 	url = "https://api.box.com/2.0/folders/"+str(folderid)+"?recurive=true"
 	#varprint(url)
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-	r = requests.request("DELETE", url=url, None, None, headers=headers)
+	r = requests.delete(url=url, headers=headers)
 	print(r.content)
 
 def get_all_file_id():
@@ -456,7 +448,7 @@ def mk_new_folder(foldername, parent_folderid):
 	url = "https://api.box.com/2.0/folders/"
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 	payload = {'name': ''+foldername+'', 'parent': {'id': '0'}}
-	r = requests.request("POST", url=url, None, json.dumps(payload), headers=headers)
+	r = requests.post(url=url, data=json.dumps(payload), headers=headers)
 	return r.content
 	
 def new_folder_choices():
