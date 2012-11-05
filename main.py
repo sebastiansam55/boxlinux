@@ -25,6 +25,7 @@ shareurl = '&auth_token=YOURAUTH_TOKENHERE'
 bitly_enabled = False 	##	Set to false if you don't have an account
 ##########################	or just don't want short urls
 
+proxies = {"":"","":""}
 
 
 #change this whenever change folders
@@ -72,7 +73,8 @@ def loop():
 	print("\t9. Make a new Folder")
 	print("\t10. Rename a File")
 	print("\t11. Rename a Folder")
-	print("\t12. List Files in Current Dir") 
+	print("\t12. List Files in Current Dir")
+	print("\t13. Setup proxy") 
 	print("\t-1. Test Method")
 	command = raw_input("What would you like to do?")
 	if command_check(command):
@@ -104,13 +106,15 @@ def loop():
 		rename_folder_choices()
 	elif command==12:
 		ls()
+	elif command==13:
+		setup_proxies()
 	elif command==-1:
 		test()
 	else:
 		loop()
 
 def authenticate():
-	r = requests.get("https://www.box.com/api/1.0/rest?action=get_ticket&api_key="+apikey)
+	r = requests.get("https://www.box.com/api/1.0/rest?action=get_ticket&api_key="+apikey, proxies=proxies)
 	xml = r.content
 	dom = parseString(xml)
 	ticket = dom.getElementsByTagName('ticket')[0].toxml()
@@ -134,7 +138,7 @@ def save_auth_token():
 	
 	
 def get_auth_token(ticket):
-	r = requests.get("https://www.box.com/api/1.0/rest?action=get_auth_token&api_key="+apikey+"&ticket="+ticket)
+	r = requests.get("https://www.box.com/api/1.0/rest?action=get_auth_token&api_key="+apikey+"&ticket="+ticket, proxies=proxies)
 	xml = r.content
 	dom = parseString(xml)	
 	global auth_token
@@ -145,7 +149,7 @@ def get_auth_token(ticket):
 
 def get_folder_list(folderid):
 	url = "https://api.box.com/2.0/folders/"+str(folderid)+".xml"
-	r = requests.get(url, headers={'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,})
+	r = requests.get(url, headers={'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}, proxies=proxies)
 	return r.content
 		
 		
@@ -227,7 +231,7 @@ def download(filenumber):
 	fileid = str(get_file_id(filenumber))
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 	url = "https://api.box.com/2.0/files/"+fileid+"/content"
-	r = requests.get(url=url, headers=headers)
+	r = requests.get(url=url, headers=headers, proxies=proxies)
 	helper.infoprint("Downloading...")
 	filerecieved = r.content
 	#this will be replaced with a file write method idealy
@@ -241,7 +245,7 @@ def download_fileid(fileid):
 	fileid=str(fileid)
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 	url = "https://api.box.com/2.0/files/"+fileid+"/content"
-	r = requests.get(url=url, headers=headers)
+	r = requests.get(url=url, headers=headers, proxies=proxies)
 	filedata = r.content
 	filename = uni_get_id(fileid, "name", "file")
 	f = open(filename, 'w')
@@ -343,7 +347,7 @@ def upload(filepath, filename, folderid):
 	except:
 		helper.errprint("File selected is not a file or other error")
 		return
-	r = requests.post(url=url, data=payload, headers=headers, files=data)
+	r = requests.post(url=url, data=payload, headers=headers, files=data, proxies=proxies)
 	print(r.content)
 	
 	
@@ -389,7 +393,7 @@ def deletefile(fileid):
 		helper.varprint("Sha1sum of file to be deleted: "+sha1sum)
 		url = "https://api.box.com/2.0/files/"+fileid
 		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token, 'If-Match': sha1sum}
-		r = requests.delete(url=url, headers=headers)
+		r = requests.delete(url=url, headers=headers, proxies=proxies)
 		print(r.content)
 	except:
 		helper.infoprint('Something bad happened when deleting file...')
@@ -410,7 +414,7 @@ def deletefolder(folderid):
 	url = "https://api.box.com/2.0/folders/"+str(folderid)+"?recurive=true"
 	#varprint(url)
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-	r = requests.delete(url=url, headers=headers)
+	r = requests.delete(url=url, headers=headers, proxies=proxies)
 	print(r.content)
 
 def get_all_file_id():
@@ -448,7 +452,7 @@ def mk_new_folder(foldername, parent_folderid):
 	url = "https://api.box.com/2.0/folders/"
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 	payload = {'name': ''+foldername+'', 'parent': {'id': '0'}}
-	r = requests.post(url=url, data=json.dumps(payload), headers=headers)
+	r = requests.post(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
 	return r.content
 	
 def new_folder_choices():
@@ -487,7 +491,7 @@ def get_item_url(itemid, itemtype):
 		url = "https://api.box.com/2.0/folders/"+itemid
 		headers = {'Authorization' : 'BoxAuth api_key='+apikey+shareurl,}
 		payload = {'shared_link': {'access': 'Open'}}
-		r = requests.request("PUT", url, None, json.dumps(payload), headers)
+		r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
 		print r.content
 		rtrnval = json.loads(r.content)
 		return [rtrnval['shared_link']['url'], rtrnval['shared_link']['download_url']]
@@ -495,7 +499,7 @@ def get_item_url(itemid, itemtype):
 		url = "https://api.box.com/2.0/files/"+itemid
 		headers = {'content-type': 'application/json', 'Authorization': 'BoxAuth api_key='+apikey+shareurl}
 		payload = {'shared_link': {'access':'Open'}}
-		r = requests.put(url, data=json.dumps(payload), headers=headers)
+		r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
 		print r.content
 		rtrnval = json.loads(r.content)
 		return [rtrnval['shared_link']['url'],rtrnval['shared_link']['download_url']]
@@ -531,14 +535,14 @@ def rm_share_url_item(itemid, itemtype):
 		url = "https://api.box.com/2.0/folders/"+itemid
 		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 		payload = {'shared_link': None}
-		r = requests.request("PUT", url, None, json.dumps(payload), headers)
+		r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
 		return r.content
 	elif itemtype=="file" or itemtype=="FILE":
 		#url = "https://api.box.com/2.0/files/"+itemid
 		url = "http://httpbin.org/put"
 		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 		payload = {'shared_link': None}
-		r = requests.request("PUT", url, None, json.dumps(payload), headers)
+		r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
 		print r.content
 		return r.content
 		
@@ -579,13 +583,13 @@ def rename_item(newname, itemid, itemtype):
 		url = "https://api.box.com/2.0/files/"+itemid
 		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 		payload = {'name': newname}
-		r = requests.request("PUT", url, None, json.dumps(payload), headers)
+		r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
 		return r.content
 	elif(itemtype=="folder" or itemtype=="FOLDER"):
 		url = "https://api.box.com/2.0/folders/"+itemid
 		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 		payload = {'name': newname}
-		r = requests.request("PUT", url, None, json.dumps(payload), headers)
+		r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
 		return r.content
 	
 def rename_folder_choices():
@@ -669,6 +673,13 @@ def sync():
 			helper.varprint(fileid)
 			download_fileid(fileid)
 			k+=1
+			
+def setup_proxies():
+	httpproxy = raw_input("What is the HTTP proxy?: ")
+	httpsproxy = raw_input("What is the HTTPS proxy?: ")
+	global proxies
+	proxies = {"http": httpproxy, "https": httpsproxy,}
+	
 
 ########################################################################
 ############################WORKING METHODS#############################	
@@ -680,12 +691,12 @@ def get_info_item(itemid, itemtype):
 	if itemtype=="folder" or itemtype=="FOLDER":
 		url = "https://api.box.com/2.0/folders/"+str(itemid)+".xml"
 		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-		r = requests.request("GET", url, None, None, headers)
+		r = requests.get(url=url, headers=headers, proxies=proxies)
 		return r.content
 	elif itemtype=="file" or itemtype=="FILE":
 		url = "https://api.box.com/2.0/files/"+str(itemid)+".xml"
 		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-		r = requests.request("GET", url, None, None, headers)
+		r = requests.get(url=url, headers=headers)
 		return r.content
 		
 def ls():
@@ -699,8 +710,8 @@ def list_items_shared():
 ########################################################################
 #######################HELPER METHODS###################################
 def test():
-    #get_folder_list(0);
-	print_folder_list(-1, False)
+	#proxies = {"":""}
+    r = requests.get("http://google.com", proxies=proxies)
 
 
 def get_local_files():
