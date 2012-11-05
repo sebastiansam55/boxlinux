@@ -14,7 +14,7 @@ import googlshortener as googl
 #BoxyLinux API-KEY
 apikey = "l7c2il3sxmetf2ielkyxbvc2k4nqqkm4"
 ##doing it like this will enable crossplatform (windows) support
-HOME = expanduser("~")
+home_path = expanduser("~")
 
 share = False
 shareurl = '&auth_token=YOURAUTH_TOKENHERE'
@@ -25,6 +25,16 @@ shareurl = '&auth_token=YOURAUTH_TOKENHERE'
 bitly_enabled = False 	##	Set to false if you don't have an account
 ##########################	or just don't want short urls
 
+##########################
+googl_enabled = False   ##
+##########################
+#The OS of the current computer; change paths accordingly
+OS = sys.platform
+global settings_filepath
+if(OS=="win32"):
+	windows = True
+else:
+	windows = False
 
 #change this whenever change folders
 global rootdom
@@ -32,8 +42,7 @@ global rootdom
 def main():
 	if int(len(sys.argv))==1:
 		if not os.path.exists('~/.boxlinux'):
-			print("Have you approved this app for use? [Y/n/Q]")
-			yorn = raw_input()
+			yorn = raw_input("Have you approved this app for use? [Y/n/Q]: ")
 			if yorn=='Y'or yorn=='y':			
 				print("Loading Settings")
 				load_settings()
@@ -117,7 +126,7 @@ def authenticate():
 	return ticket
 	
 def load_settings():
-	f = open(os.getenv("HOME")+'/.boxlinux', 'r')
+	f = open(home_path+'/.boxlinux', 'r')
 	global auth_token
 	auth_token = str(f.readline())
 	if(bitly_enabled):
@@ -127,7 +136,7 @@ def load_settings():
 	f.close()
 	
 def save_auth_token():
-	f = open(os.getenv("HOME")+'/.boxlinux', 'w')
+	f = open(home_path+'/.boxlinux', 'w')
 	f.write(auth_token)
 	f.close()
 	
@@ -332,13 +341,13 @@ def shellhelper():
 		return
 		
 		
-def upload(filepath, filename, folderid):
+def upload(file_path, filename, folderid):
 	helper.infoprint("Uploading...")
 	url = "https://api.box.com/2.0/files/content"
 	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 	payload = {'filename1': filename, 'folder_id': folderid}
 	try:
-		data = {filename: open(filepath, 'r')}
+		data = {filename: open(file_path, 'r')}
 	except:
 		helper.errprint("File selected is not a file or other error")
 		return
