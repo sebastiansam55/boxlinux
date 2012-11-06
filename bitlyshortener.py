@@ -11,9 +11,10 @@ def load_api_key():
 	global api_key
 	global username
 	f = open(os.getenv("HOME")+'/.boxlinux', 'r')
-	f.readline() ##the auth token from BOX
-	api_key = f.readline()
-	username = f.readline()
+	settings = json.loads(f.read())
+	api_key = settings['bitly']
+	username = settings['username']
+	return [api_key, username]
 
 def shorten_url(longUrl):
 	longUrl = urllib.quote_plus(longUrl)
