@@ -679,6 +679,7 @@ def setup_proxies():
 	httpsproxy = raw_input("What is the HTTPS proxy?: ")
 	global proxies
 	proxies = {"http": httpproxy, "https": httpsproxy,}
+	save_settings():
 	
 
 ########################################################################
