@@ -16,14 +16,16 @@ apikey = "l7c2il3sxmetf2ielkyxbvc2k4nqqkm4"
 ##doing it like this will enable crossplatform (windows) support
 HOME = expanduser("~")
 
-share = False
+share = True
 shareurl = '&auth_token=YOURAUTH_TOKENHERE'
 
 ##need some way for this is be set from the file settings
 
 ##########################	Set to true for short URLS
 bitly_enabled = False 	##	Set to false if you don't have an account
+googl_enabled = True	##
 ##########################	or just don't want short urls
+
 
 proxies = {"":"","":""}
 
@@ -124,16 +126,15 @@ def authenticate():
 def load_settings():
 	f = open(os.getenv("HOME")+'/.boxlinux', 'r')
 	global auth_token
-	auth_token = str(f.readline())
-	if(bitly_enabled):
-		f.readline()
-		f.readline()
-		
+	auth_token = json.loads(str(f.read()))
+	auth_token = auth_token['auth_token']
+	print(auth_token)
 	f.close()
 	
-def save_auth_token():
+def save_settings():
 	f = open(os.getenv("HOME")+'/.boxlinux', 'w')
-	f.write(auth_token)
+	data = {"auth_token":auth_token, "proxies":proxies}
+	f.write(json.dumps(data))
 	f.close()
 	
 	
@@ -144,7 +145,7 @@ def get_auth_token(ticket):
 	global auth_token
 	auth_token = dom.getElementsByTagName('auth_token')[0].toxml()
 	auth_token = auth_token.replace('<auth_token>', '').replace("</auth_token>", "")
-	save_auth_token()
+	save_settings()
 
 
 def get_folder_list(folderid):
@@ -489,7 +490,7 @@ def folder_url_choices():
 def get_item_url(itemid, itemtype):
 	if itemtype=="folder" or itemtype=="FOLDER":
 		url = "https://api.box.com/2.0/folders/"+itemid
-		headers = {'Authorization' : 'BoxAuth api_key='+apikey+shareurl,}
+		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 		payload = {'shared_link': {'access': 'Open'}}
 		r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
 		print r.content
@@ -497,7 +498,7 @@ def get_item_url(itemid, itemtype):
 		return [rtrnval['shared_link']['url'], rtrnval['shared_link']['download_url']]
 	elif itemtype=="file" or itemtype=="FILE":
 		url = "https://api.box.com/2.0/files/"+itemid
-		headers = {'content-type': 'application/json', 'Authorization': 'BoxAuth api_key='+apikey+shareurl}
+		headers = {'content-type': 'application/json', 'Authorization': 'BoxAuth api_key='+apikey+'&auth_token='+auth_token}
 		payload = {'shared_link': {'access':'Open'}}
 		r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
 		print r.content
@@ -710,8 +711,7 @@ def list_items_shared():
 ########################################################################
 #######################HELPER METHODS###################################
 def test():
-	#proxies = {"":""}
-    r = requests.get("http://google.com", proxies=proxies)
+	settings = {"":""}
 
 
 def get_local_files():
