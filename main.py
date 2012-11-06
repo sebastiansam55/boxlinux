@@ -22,8 +22,8 @@ shareurl = '&auth_token=YOURAUTH_TOKENHERE'
 ##need some way for this is be set from the file settings
 
 ##########################	Set to true for short URLS
-bitly_enabled = False 	##	Set to false if you don't have an account
-googl_enabled = True	##
+bitly_enabled = True 	##	Set to false if you don't have an account
+googl_enabled = False	##
 ##########################	or just don't want short urls
 
 
@@ -539,8 +539,7 @@ def rm_share_url_item(itemid, itemtype):
 		r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
 		return r.content
 	elif itemtype=="file" or itemtype=="FILE":
-		#url = "https://api.box.com/2.0/files/"+itemid
-		url = "http://httpbin.org/put"
+		url = "https://api.box.com/2.0/files/"+itemid
 		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
 		payload = {'shared_link': None}
 		r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
