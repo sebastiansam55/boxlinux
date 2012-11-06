@@ -4,7 +4,7 @@ import requests
 import json
 
 
-def shortenUrl(longURL):
+def shorten_url(longURL):
 	url = "https://www.googleapis.com/urlshortener/v1/url"
 	headers = {'Content-type': 'application/json'}
 	data = {'longUrl': longURL}
