@@ -13,7 +13,7 @@ The only problem that I have run into with trying to run it is that python3.2 (o
 
 * Selection of folders and files based off of filenames 
 
-	* All as far as I have tested
+	* Most, I have yet to finish all of them.
 
 * Authentication (through BOX v1 API)
 
@@ -33,6 +33,8 @@ The only problem that I have run into with trying to run it is that python3.2 (o
 
 	* Will also return bit.ly shortened links for files (if enabled)
 	
+	* Returns "direct" links but they will only work if the account is *PRO*
+	
 * Saves settings to ~/.boxlinux (Saved as JSON data)
 
 * Delete Folders
@@ -47,6 +49,8 @@ The only problem that I have run into with trying to run it is that python3.2 (o
 	
 	* Legacy bitly authentication
 	
+* Display all comments on files.
+	
 ## Planned Features:
 
 * Automatic "Syncing"
@@ -56,8 +60,6 @@ The only problem that I have run into with trying to run it is that python3.2 (o
 * Box Version control (Need box pro account, not feature of free)
 	
 * Upload to other directories (Needs to be tested)
-	
-* View Comments on File (maybe not sure if that would be useful yet)
 
 * Comment on Files
 
@@ -94,4 +96,4 @@ This documentation is aboslutely atrocious (in my opinion) I mean it looks nice,
 
 [Bit.ly API Key] (http://bitly.com/a/your_api_key)
 
-I have choosen, because of my familarness with XML that all the responses from the BOX API should be requested in XML format, now that I've used JSON a bit, I might convert everything over sometime or other
+After gettings used to XML I'm going to change what I did in XML to use JSON.
