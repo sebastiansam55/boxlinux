@@ -50,6 +50,8 @@ The only problem that I have run into with trying to run it is that python3.2 (o
 	* Legacy bitly authentication
 	
 * Display all comments on files.
+
+* Comment on Files
 	
 ## Planned Features:
 
@@ -61,11 +63,7 @@ The only problem that I have run into with trying to run it is that python3.2 (o
 	
 * Upload to other directories (Needs to be tested)
 
-* Comment on Files
-
 * View Files shared with you
-
-* Update file info (rename files etc.)
 	
 * Copy files on BOX (not sure why you would need to but it's in the API)
 
