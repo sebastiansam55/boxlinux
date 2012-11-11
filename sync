@@ -2,15 +2,11 @@
 if [ -d ~/Box ]; then
 	#the directory exists
 	cd ~/Box
-	boxlinux -da
-	boxlinux -mkfolders
+	boxlinux -dla
 else
 	#the directory does not exists have to create it
 	mkdir ~/Box
 	cd ~/Box
-	boxlinux -da
-	boxlinux -mkfolders
-	ListOfFiles =`ls -1d */`
-	boxlinux sync ListOfFiles
+	boxlinux -dla
 fi
 

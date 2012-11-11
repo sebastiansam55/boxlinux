@@ -5,9 +5,9 @@ import os
 import json
 import requests
 from os.path import expanduser
+import argparse
 ##user made
 from helper import varprint, errprint, infoprint, foldercraft
-import delete
 import bitlyshortener as bitly
 import googlshortener as googl
 #BoxyLinux API-KEY
@@ -29,45 +29,113 @@ proxies = {"":"","":""}
 
 global headers
 
-
+#version number
+ver = "0.1"
 #change this whenever change folders
 global rootdom
 #global rootJSON
 
 def main():
+	#ArgumentParser setup
+	parser = argparse.ArgumentParser(description="")
+	parser.add_argument('-dl', metavar='filename', type=str, dest='dlFileName', help="Filename to download", action=dlAction)
+	parser.add_argument('-dla', help="Download all files", action='store_true')
+	parser.add_argument('-u', metavar='filename', type=str, dest='ulFileName', help="Filename to upload", action=ulAction)
+	parser.add_argument('--setup', help="Setup for use", action='store_true')
+	parser.add_argument('-lsh', help="List filenames for human view", action='store_true')
+	parser.add_argument('-ls', help="Print filenames on Box to stdout", action='store_true')
+	parser.add_argument('--interactive', help="Enter oldschool interactive mode", action='store_true')
+	parser.add_argument('--http-proxy', metavar='PROXYIP', type=str, dest='http_proxy', help="HTTP proxy info", action=proxyAction)
+	parser.add_argument('--https-proxy', metavar='PROXYIP', type=str, dest='https_proxy', help="HTTPS proxy info", action=proxyAction)
+	parser.add_argument('--version', action='version', version='%(prog)s '+ver)
+	args = parser.parse_args()
+	print args.dla
+	if args.interactive:
+		interactive()
+	elif args.lsh:
+		init_settings()
+		ls()
+	elif args.ls:
+		ls_stdout()
+	elif args.setup:
+		setup()
+	elif args.dla:
+		init_settings()
+		download_all(get_all_file_id())
+	
+		
+def interactive():
 	global headers
-	if int(len(sys.argv))==1:
-		if not os.path.exists('~/.boxlinux'):
-			print("Have you approved this app for use? [Y/n/Q]")
-			yorn = raw_input()
-			if yorn=='Y'or yorn=='y':			
-				print("Loading Settings")
-				load_settings()
-				headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-			elif command_check(yorn):
-				print("Quitting")
-				return 0
-			else:
-				ticket = authenticate()
-				print("Open this link in browser and confirm!")
-				print("https://www.box.com/api/1.0/auth/"+ticket)
-				raw_input("Press enter when approved")
-				get_auth_token(ticket)
-			
-		else:
+	if not os.path.exists('~/.boxlinux'):
+		print("Have you approved this app for use? [Y/n/Q]")
+		yorn = raw_input()
+		if yorn=='Y'or yorn=='y':			
 			print("Loading Settings")
 			load_settings()
 			headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-		global rootdom
-		rootdom = parseString(get_folder_list(0))
-		#global rootJSON
-		#rootJSON = json.loads(get_folder_json(0))
-		loop()
-		return 0
+		elif command_check(yorn):
+			print("Quitting")
+			return 0
+		else:
+			ticket = authenticate()
+			print("Open this link in browser and confirm!")
+			print("https://www.box.com/api/1.0/auth/"+ticket)
+			raw_input("Press enter when approved")
+			get_auth_token(ticket)		
 	else:
-		shellhelper()
+		print("Loading Settings")
+		load_settings()
+		headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
+	global rootdom
+	rootdom = parseString(get_folder_list(0))
+	#global rootJSON
+	#rootJSON = json.loads(get_folder_json(0))
+	loop()
+	return 0
+
+
+class dlAction(argparse.Action):
+	def __call__(self, parser, namespace, values, option_string=None):
+		init_settings()
+		download_fileid(uni_get_name(values, "id", "file"))
 		
+class ulAction(argparse.Action):
+	def __call__(self, parser, namespace, values, option_string=None):
+		init_settings()
+		upload(os.getcwd()+values, values, 0)
 		
+class proxyAction(argparse.Action):
+	def __call__(self, parser, namespace, values, option_string=None):
+		#have to load settings so the auth_token is available
+		init_settings()
+		proxies = {"http": values.http_proxy, "https": values.https_proxy}
+		save_settings()
+
+def setup():
+	ticket = authenticate()
+	print("Open this link in browser and confirm!")
+	print("https://www.box.com/api/1.0/auth/"+ticket)
+	raw_input("Press enter when approved")
+	get_auth_token(ticket)	
+
+def ls_stdout():
+	init_settings()
+	#get one list for folders and one for files
+	folders = get_item_name_list("folder")
+	files = get_item_name_list("file")
+	#Not sure that this is the best way to do this; have to think about BASH usability
+	for i in folders:
+		sys.stdout.write(folders[i])
+	for i in files:
+		sys.stdout.write(folders[i])
+
+def init_settings():
+	load_settings()
+	global headers
+	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
+	global rootdom
+	rootdom = parseString(get_folder_list(0))
+	
 def loop():
 	print("	0. Download")
 	print("\t1. Change Directory")
@@ -257,7 +325,8 @@ def download(filenumber):
 	
 def download_fileid(fileid):
 	fileid=str(fileid)
-	url = build_url("files", fileid, "content")
+	url = build_url("file", fileid, "content")
+	print url
 	r = requests.get(url=url, headers=headers, proxies=proxies)
 	filedata = r.content
 	filename = uni_get_id(fileid, "name", "file")
@@ -302,51 +371,6 @@ def command_check(command):
 	command = str(command)
 	if command=='Q' or command=='q':
 		return True
-
-#TODO: Convert this to prebuilt module like optparse
-def shellhelper():
-	#as of right now the best I can do is offer only access to the root
-	#should write something that will get the folders and files into an xml file...
-	#it could then do some matching to match file names with fileids'
-	#some globals will also have to be set/reset... rootxml auth_token etc.
-	load_settings() #this will load auth_token
-	global rootdom
-	rootdom = parseString(get_folder_list(0))
-	command = str(sys.argv[1])
-	#listed in order of usage (suspected usage at least)
-	if command=='-h' or command=='--help':
-		print("usage boxlinux [option] At this stage only one command at a time will work....")
-		print("-h\t\t :will display this help message")
-		print("-V\t\t :will display the Version Number")
-		print("-u <filename>\t :will upload the specified file to the root dir (unless other wise specified)")
-		print("-d <filename>\t :Download the filename... according to the number listed in ls (see below)")
-		print("ls\t\t :will display the files and folders in the root dir (unless other wise specified)")
-		print("-da Will download all the files in the root directory (not yet recursive)")
-		print("-mkfolders Makes folders based on Box folders")
-		##GET TO WORK ON THIS LATER
-		print("-rm <filename>\t :will delete file on Box.com with same name and sha1sum")
-	elif command=='-V' or command=='-version':
-		print('Version 0.0.0.1')
-	elif command=='ls':
-		ls()
-	elif command=='-u' or command=='--upload':
-		upload(os.getcwd()+"/"+sys.argv[2], sys.argv[2], 0)
-	elif command=='-d':
-		download(sys.argv[2])
-	elif command=='-da':
-		download_all(get_all_file_id())
-	elif command=='-mkfolders':
-		try:
-			dom = rootdom
-			icnt=1
-			for i in dom.getElementsByTagName('folder'):
-				foldername = dom.getElementsByTagName('folder')[icnt].getElementsByTagName('name')[0].toxml().replace('<name>', '').replace('</name>', '')
-				foldercraft("./"+foldername)
-				icnt = icnt+1
-		except:
-			errprint("You might be okay...")
-	else:
-		return
 
 def upload(filepath, filename, folderid):
 	infoprint("Uploading...")
@@ -730,7 +754,7 @@ def list_items_shared():
 	print_file_list(print_folder_list(-1, True), False)
 
 def test():
-	print build_url("folder", str(3644288271)+"?recursive=true", None)
+	print("DEBUG METHOD")
 
 
 def get_local_files():
