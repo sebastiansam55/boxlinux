@@ -15,6 +15,11 @@ apikey = "l7c2il3sxmetf2ielkyxbvc2k4nqqkm4"
 ##doing it like this will enable crossplatform (windows) support
 HOME = expanduser("~")
 
+if(os.name=="nt"):
+	separator = "\\"
+else:
+	separator="/"
+
 share = True
 
 ##need some way for this is be set from the file settings
@@ -111,7 +116,7 @@ def authenticate():
 	return ticket
 	
 def load_settings():
-	f = open(os.getenv("HOME")+'/.boxlinux', 'r')
+	f = open(HOME+separator+'.boxlinux', 'r')
 	global auth_token
 	auth_token = json.loads(str(f.read()))
 	auth_token = auth_token['auth_token']
@@ -119,7 +124,7 @@ def load_settings():
 	
 def save_settings():
 	## this becomes problem because it will overwrite the file getting rid of any bitly settings
-	f = open(os.getenv("HOME")+'/.boxlinux', 'w')
+	f = open(HOME+separator+'.boxlinux', 'w')
 	data = {"auth_token":auth_token, "proxies":proxies}
 	f.write(json.dumps(data))
 	f.close()
