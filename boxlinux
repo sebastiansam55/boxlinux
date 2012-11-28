@@ -48,7 +48,7 @@ def main():
 	parser.add_argument('--https-proxy', metavar='PROXYIP', type=str, dest='https_proxy', help="HTTPS proxy info", action=proxyAction)
 	parser.add_argument('--version', action='version', version='%(prog)s '+ver)
 	args = parser.parse_args()
-	print args.dla
+	#print args.dla
 	if args.lsh:
 		init_settings()
 		ls()
@@ -60,6 +60,11 @@ def main():
 		init_settings()
 		download_all(get_all_file_id())
 		
+class dlaAction(argparse.Action):
+	def __call__(self, parser, namespace, values, option_string=None):
+		init_settings()
+		#download_all(get_all_file_id(), folder_id)
+		
 class dlAction(argparse.Action):
 	def __call__(self, parser, namespace, values, option_string=None):
 		init_settings()
@@ -67,8 +72,9 @@ class dlAction(argparse.Action):
 		
 class ulAction(argparse.Action):
 	def __call__(self, parser, namespace, values, option_string=None):
+		print values
 		init_settings()
-		upload(os.getcwd()+values, values, 0)
+		upload(os.getcwd()+"/"+values, values, 0)
 		
 class proxyAction(argparse.Action):
 	def __call__(self, parser, namespace, values, option_string=None):
