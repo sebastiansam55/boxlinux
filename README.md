@@ -13,15 +13,13 @@ The only problem that I have run into with trying to run it is that python3.2 (o
 
 * Selection of folders and files based off of filenames 
 
-	* Most, I have yet to finish all of them.
-
 * Authentication (through BOX v1 API)
 
-* Interactive mode
+* Interactive mode (Basically depricated now)
 	
 * Command line mode (great for scripting) --*Not Completed*
 	
-* Upload (to root dir)
+* Upload (see below on how to UL to different DIRs)
 	
 * Download (from any folder (using the cd command))
 	
@@ -52,6 +50,8 @@ The only problem that I have run into with trying to run it is that python3.2 (o
 * Display all comments on files.
 
 * Comment on Files
+
+* Upload to other directories (Dependant on --dir being before -u)
 	
 ## Planned Features:
 
@@ -60,8 +60,6 @@ The only problem that I have run into with trying to run it is that python3.2 (o
 * More sharable link options (expire time, permissions etc.)
 	
 * Box Version control (Need box pro account, not feature of free)
-	
-* Upload to other directories (Needs to be tested)
 
 * View Files shared with you
 	

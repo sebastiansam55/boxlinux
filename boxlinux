@@ -28,6 +28,8 @@ googl_enabled = False	##
 proxies = {"":"","":""}
 
 global headers
+global direct
+direct = ""
 
 #version number
 ver = "0.1"
@@ -44,11 +46,12 @@ def main():
 	parser.add_argument('--setup', help="Setup for use", action='store_true')
 	parser.add_argument('-lsh', help="List filenames for human view", action='store_true')
 	parser.add_argument('-ls', help="Print filenames on Box to stdout", action='store_true')
-	parser.add_argument('--http-proxy', metavar='PROXYIP', type=str, dest='http_proxy', help="HTTP proxy info", action=proxyAction)
-	parser.add_argument('--https-proxy', metavar='PROXYIP', type=str, dest='https_proxy', help="HTTPS proxy info", action=proxyAction)
+	##Need to think more about how to implment something like this
+	#parser.add_argument('--http-proxy', metavar='PROXYIP', type=str, dest='http_proxy', help="HTTP proxy info", action=proxyAction)
+	#parser.add_argument('--https-proxy', metavar='PROXYIP', type=str, dest='https_proxy', help="HTTPS proxy info", action=proxyAction)
+	parser.add_argument('--dir', metavar='DIR', type=str, dest='ActionDir', help="Box directory to perform action in/on (Should come first!)", action=dirAction)
 	parser.add_argument('--version', action='version', version='%(prog)s '+ver)
 	args = parser.parse_args()
-	#print args.dla
 	if args.lsh:
 		init_settings()
 		ls()
@@ -74,7 +77,12 @@ class ulAction(argparse.Action):
 	def __call__(self, parser, namespace, values, option_string=None):
 		print values
 		init_settings()
-		upload(os.getcwd()+"/"+values, values, 0)
+		if not direct=="":
+			folderid = folder_id_from_name(direct)
+			print folderid
+			upload(os.getcwd()+"/"+values, values, folderid)
+		else:
+			upload(os.getcwd()+"/"+values, values, 0)
 		
 class proxyAction(argparse.Action):
 	def __call__(self, parser, namespace, values, option_string=None):
@@ -82,6 +90,11 @@ class proxyAction(argparse.Action):
 		init_settings()
 		proxies = {"http": values.http_proxy, "https": values.https_proxy}
 		save_settings()
+		
+class dirAction(argparse.Action):
+	def __call__(self, parser, namespace, values, option_string=None):
+		global direct
+		direct = values
 
 def setup():
 	ticket = authenticate()
@@ -246,11 +259,13 @@ def file_id_from_name(filename):
 		testervar = files.getElementsByTagName('name')[0].toxml().replace('<name>','').replace('</name>','')
 		if testervar==filename:
 			return files.getElementsByTagName('id')[0].toxml().replace('<id>','').replace('</id>','')
-	
-def get_folder_id(folderlistno):
+			
+def folder_id_from_name(filename):
 	dom = rootdom
-	folderid = dom.getElementsByTagName('folder')[int(folderlistno)].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
-	return folderid
+	for files in dom.getElementsByTagName('folder'):
+		testervar = files.getElementsByTagName('name')[0].toxml().replace('<name>','').replace('</name>','')
+		if testervar==filename:
+			return files.getElementsByTagName('id')[0].toxml().replace('<id>','').replace('</id>','')
 
 def upload(filepath, filename, folderid):
 	infoprint("Uploading...")
