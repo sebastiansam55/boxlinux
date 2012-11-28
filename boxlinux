@@ -6,10 +6,8 @@ import json
 import requests
 from os.path import expanduser
 import argparse
-##user made
-from helper import varprint, errprint, infoprint, foldercraft
-import bitlyshortener as bitly
-import googlshortener as googl
+##removing these so it can all be in one file
+#from helper import varprint, errprint, infoprint, foldercraft
 #BoxyLinux API-KEY
 apikey = "l7c2il3sxmetf2ielkyxbvc2k4nqqkm4"
 ##doing it like this will enable crossplatform (windows) support
@@ -515,6 +513,30 @@ def get_local_files():
 #init_settings()
 #print get_file_id(0)
 
+
+def errprint(printthis):	
+	print("[ERROR] "+printthis)
+	
+def varprint(printthis):
+	print("[VARCHECK] "+str(printthis))
+	
+def infoprint(printthis):
+	print("[INFO] "+str(printthis))
+	
+	
+def ls():
+	main.print_file_list(print_folder_list(-1, False), False)
+	main.loop()
+
+def list_items_shared():
+	main.print_file_list(print_folder_list(0, True), False)
+	main.loop()
+	
+def foldercraft(path):
+	if not os.path.exists(path):
+		os.makedirs(path)
+	else:
+		print("Folder already exists")
 
 ########################################################################
 if __name__ == '__main__':
