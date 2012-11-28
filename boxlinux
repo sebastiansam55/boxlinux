@@ -37,10 +37,12 @@ ver = "0.1"
 global rootdom
 #global rootJSON
 
+
+
 def main():
 	#ArgumentParser setup
 	parser = argparse.ArgumentParser(description="")
-	parser.add_argument('-dl', metavar='filename', type=str, dest='dlFileName', help="Filename to download", action=dlAction)
+	parser.add_argument('-dl', metavar='filename', type=str, dest='dlFileName', help="Filename to download (Needs --dir if file in different dir)", action=dlAction)
 	parser.add_argument('-dla', help="Download all files", action='store_true')
 	parser.add_argument('-u', metavar='filename', type=str, dest='ulFileName', help="Filename to upload", action=ulAction)
 	parser.add_argument('--setup', help="Setup for use", action='store_true')
@@ -50,6 +52,7 @@ def main():
 	#parser.add_argument('--http-proxy', metavar='PROXYIP', type=str, dest='http_proxy', help="HTTP proxy info", action=proxyAction)
 	#parser.add_argument('--https-proxy', metavar='PROXYIP', type=str, dest='https_proxy', help="HTTPS proxy info", action=proxyAction)
 	parser.add_argument('--dir', metavar='DIR', type=str, dest='ActionDir', help="Box directory to perform action in/on (Should come first!)", action=dirAction)
+	parser.add_argument('--sync', help="Sync files", action='store_true')
 	parser.add_argument('--version', action='version', version='%(prog)s '+ver)
 	args = parser.parse_args()
 	if args.lsh:
@@ -62,16 +65,39 @@ def main():
 	elif args.dla:
 		init_settings()
 		download_all(get_all_file_id())
+	elif args.sync:
+		init_settings()
+		#download all files in root dir
+		download_all(get_all_file_id())
+		dom = parseString(get_folder_list(0))
+		folderList = dom.getElementsByTagName('folder')
+		j=0
+		global basePath
+		tmpbasePath = basePath
+		for i in folderList:
+			folderID = i.getElementsByTagName('id')[0].toxml().replace('<id>','').replace('</id>', '')
+			folderName = i.getElementsByTagName('name')[0].toxml().replace('<name>', '').replace('</name>', '')
+			basePath = tmpbasePath+"/"+folderName
+			if j>0:
+				if not os.path.exists(basePath):
+					os.makedirs(basePath)
+				update_dom(folderID)
+				download_all(get_all_file_id())
+			j=j+1
 		
 class dlaAction(argparse.Action):
 	def __call__(self, parser, namespace, values, option_string=None):
 		init_settings()
-		#download_all(get_all_file_id(), folder_id)
+		download_all(get_all_file_id(), folder_id)
 		
 class dlAction(argparse.Action):
 	def __call__(self, parser, namespace, values, option_string=None):
 		init_settings()
-		download_fileid(uni_get_name(values, "id", "file"))
+		if direct=="":
+			download_fileid(uni_get_name(values, "id", "file"), None)
+		else:
+			update_dom(uni_get_name(direct, "id", "folder"))
+			download_fileid(uni_get_name(values, "id", "file"), None)
 		
 class ulAction(argparse.Action):
 	def __call__(self, parser, namespace, values, option_string=None):
@@ -132,6 +158,10 @@ def authenticate():
 def load_settings():
 	f = open(os.getenv("HOME")+'/.boxlinux', 'r')
 	global auth_token
+	global basePath
+	basePath = os.getcwd()+"/BOX"
+	if not os.path.exists(basePath):
+		os.makedirs(basePath)
 	auth_token = json.loads(str(f.read()))
 	auth_token = auth_token['auth_token']
 	f.close()
@@ -234,14 +264,15 @@ def download(filenumber):
 	f.write(filerecieved)
 	f.close()
 	
-def download_fileid(fileid):
+def download_fileid(fileid, filepath):
+	infoprint("Downloading: "+fileid)
 	fileid=str(fileid)
 	url = build_url("file", fileid, "content")
-	print url
+	#print url
 	r = requests.get(url=url, headers=headers, proxies=proxies)
 	filedata = r.content
 	filename = uni_get_id(fileid, "name", "file")
-	f = open(filename, 'w')
+	f = open(basePath+"/"+filename, 'w')
 	f.write(filedata)
 	f.close()
 	
@@ -306,7 +337,7 @@ def get_all_file_id():
 			fileid[i] = dom.getElementsByTagName('file')[i].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
 			i=i+1
 		except:
-			errprint("file might not exist")
+			#errprint("file might not exist")
 			i=cnt+5
 	return fileid
 
@@ -409,18 +440,6 @@ def uni_get_name(itemname, getthis, itemtype):
 def update_dom(folderid):
 	global rootdom
 	rootdom = parseString(get_folder_list(folderid))
-	
-def sync():
-	global rootdom
-	folderlist = get_item_name_list("folder")
-	for i in folderlist:
-		rootdom = parseString(get_folder_list(uni_get_name(folderlist[i], "id", "folder")))
-		k=0
-		for j in rootdom.getElementsByTagName("file"):
-			fileid = rootdom.getElementsByTagName("file")[k].getElementsByTagName("id")[0].toxml().replace('<id>','').replace('</id>','')
-			varprint(fileid)
-			download_fileid(fileid)
-			k+=1
 			
 def setup_proxies():
 	httpproxy = raw_input("What is the HTTP proxy?: ")
@@ -468,7 +487,8 @@ def mk_comment(fileid, comment):
 	
 def download_all(file_list):
 	for i in file_list:
-		download_fileid(file_list[i])
+		#print i
+		download_fileid(file_list[i], "")
 
 def get_info_item(itemid, itemtype):
 	if itemtype=="folder" or itemtype=="FOLDER":
@@ -492,7 +512,8 @@ def test():
 def get_local_files():
 	return os.listdir(os.getcwd())	
 
-
+#init_settings()
+#print get_file_id(0)
 
 
 ########################################################################
