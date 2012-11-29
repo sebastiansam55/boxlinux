@@ -49,7 +49,7 @@ The only problem that I have run into with trying to run it is that python3.2 (o
 
 * Upload to other directories (Dependant on --dir being before -u)
 
-* Added syncing!! (use 'boxlinux --sync'!) Right now it writes all the files to a folder in your home directory named "BOX"
+* Added syncing!! (use 'boxlinux --sync'!)
 
 ***: Still in the code just no longer supported via command line interaction.
 	
