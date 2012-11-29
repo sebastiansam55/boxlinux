@@ -5,10 +5,6 @@ Bringing Box to the Linux desktop
 
 [License] (http://www.gnu.org/licenses/gpl.html)
 
-To use this tool (in it's current state) add it into your BIN, I recommend making a bin folder in your home dir and adding that to your $PATH. I'd also rename the *main.py* file to boxlinux, which is what it will eventually be.
-Right now this is only officially supported for python 2.7 (developed and tested) but it should be mostly compatible with python 3 and newer versions.
-The only problem that I have run into with trying to run it is that python3.2 (on ubuntu 12.04) does not install python-requests to the python3.2 libs or whatever.
-
 ## Current Capabities:
 
 * Selection of folders and files based off of filenames 
