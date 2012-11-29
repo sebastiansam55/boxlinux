@@ -111,6 +111,7 @@ class ulAction(argparse.Action):
 			upload(os.getcwd()+"/"+values, values, folderid)
 		else:
 			upload(os.getcwd()+"/"+values, values, 0)
+		exit(0)
 		
 class proxyAction(argparse.Action):
 	def __call__(self, parser, namespace, values, option_string=None):
@@ -144,7 +145,7 @@ def ls_stdout():
 	for i in folders:
 		sys.stdout.write(folders[i])
 	for i in files:
-		sys.stdout.write(folders[i])
+		sys.stdout.write(files[i])
 
 def init_settings():
 	load_settings()
@@ -532,15 +533,9 @@ def varprint(printthis):
 	
 def infoprint(printthis):
 	print("[INFO] "+str(printthis))
-	
-	
-def ls():
-	main.print_file_list(print_folder_list(-1, False), False)
-	main.loop()
 
 def list_items_shared():
-	main.print_file_list(print_folder_list(0, True), False)
-	main.loop()
+	print_file_list(print_folder_list(0, True), False)
 	
 def foldercraft(path):
 	if not os.path.exists(path):
