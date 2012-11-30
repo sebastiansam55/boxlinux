@@ -4,548 +4,468 @@ import sys
 import os
 import json
 import requests
-from os.path import expanduser
 import argparse
-##removing these so it can all be in one file
-#from helper import varprint, errprint, infoprint, foldercraft
-#BoxyLinux API-KEY
-apikey = "l7c2il3sxmetf2ielkyxbvc2k4nqqkm4"
-##doing it like this will enable crossplatform (windows) support
-HOME = expanduser("~")
 
-if(os.name=="nt"):
-	separator = "\\"
-else:
-	separator="/"
-
-share = True
-
-##need some way for this is be set from the file settings
-
-##########################	Set to true for short URLS
-bitly_enabled = False 	##	Set to false if you don't have an account
-googl_enabled = False	##
-##########################	or just don't want short urls
-
-##Leave as blank until otherwise loaded or set
 proxies = {"":"","":""}
 
-global headers
-global direct
-direct = ""
 
-#version number
-ver = "0.1"
-#change this whenever change folders
-global rootdom
-#global rootJSON
+class boxlinux():
 
-
-
-def main():
-	#ArgumentParser setup
-	parser = argparse.ArgumentParser(description="")
-	parser.add_argument('-dl', metavar='filename', type=str, dest='dlFileName', help="Filename to download (Needs --dir if file in different dir)", action=dlAction)
-	parser.add_argument('-dla', help="Download all files", action='store_true')
-	parser.add_argument('-u', metavar='filename', type=str, dest='ulFileName', help="Filename to upload", action=ulAction)
-	parser.add_argument('--setup', help="Setup for use", action='store_true')
-	parser.add_argument('-lsh', help="List filenames for human view", action='store_true')
-	parser.add_argument('-ls', help="Print filenames on Box to stdout", action='store_true')
-	##Need to think more about how to implment something like this
-	#parser.add_argument('--http-proxy', metavar='PROXYIP', type=str, dest='http_proxy', help="HTTP proxy info", action=proxyAction)
-	#parser.add_argument('--https-proxy', metavar='PROXYIP', type=str, dest='https_proxy', help="HTTPS proxy info", action=proxyAction)
-	parser.add_argument('--dir', metavar='DIR', type=str, dest='ActionDir', help="Box directory to perform action in/on (Should come first!)", action=dirAction)
-	parser.add_argument('--sync', help="Sync files", action='store_true')
-	parser.add_argument('--version', action='version', version='%(prog)s '+ver)
-	args = parser.parse_args()
-	if args.lsh:
-		init_settings()
-		ls()
-	elif args.ls:
-		ls_stdout()
-	elif args.setup:
-		setup()
-	elif args.dla:
-		init_settings()
-		download_all(get_all_file_id())
-	elif args.sync:
-		init_settings()
-		#download all files in root dir
-		download_all(get_all_file_id())
-		dom = parseString(get_folder_list(0))
-		folderList = dom.getElementsByTagName('folder')
-		j=0
-		global basePath
-		tmpbasePath = basePath
-		for i in folderList:
-			folderID = i.getElementsByTagName('id')[0].toxml().replace('<id>','').replace('</id>', '')
-			folderName = i.getElementsByTagName('name')[0].toxml().replace('<name>', '').replace('</name>', '')
-			basePath = tmpbasePath+separator+folderName
-			if j>0:
-				if not os.path.exists(basePath):
-					os.makedirs(basePath)
-				update_dom(folderID)
-				download_all(get_all_file_id())
-			j=j+1
-	else:
-		print("Try running `boxlinux --help` or `boxlinux --setup`")
-class dlaAction(argparse.Action):
-	def __call__(self, parser, namespace, values, option_string=None):
-		init_settings()
-		download_all(get_all_file_id(), folder_id)
-		
-class dlAction(argparse.Action):
-	def __call__(self, parser, namespace, values, option_string=None):
-		init_settings()
-		if direct=="":
-			download_fileid(uni_get_name(values, "id", "file"), None)
+	def __init__(self):
+		self.apikey = "l7c2il3sxmetf2ielkyxbvc2k4nqqkm4"
+		self.version = "0.1"
+		self.homeDir = os.path.expanduser("~")
+		if(os.name=="nt"):
+			self.separator = "\\"
 		else:
-			update_dom(uni_get_name(direct, "id", "folder"))
-			download_fileid(uni_get_name(values, "id", "file"), None)
-		
-class ulAction(argparse.Action):
-	def __call__(self, parser, namespace, values, option_string=None):
-		init_settings()
-		if not direct=="":
-			folderid = folder_id_from_name(direct)
-			upload(os.getcwd()+"/"+values, values, folderid)
+			self.separator="/"		
+		#ArgumentParser setup
+		parser = argparse.ArgumentParser(description="")
+		parser.add_argument('-dl', metavar='filename', type=str, dest='dlFileName', help="Filename to download (Needs --dir if file in different dir)")
+		parser.add_argument('-dla', help="Download all files", action='store_true')
+		parser.add_argument('-u', metavar='filename', type=str, dest='ulFileName', help="Filename to upload")
+		parser.add_argument('--setup', help="Setup for use", action='store_true')
+		parser.add_argument('-lsh', help="List filenames for human view", action='store_true')
+		parser.add_argument('-ls', help="Print filenames on Box to stdout", action='store_true')
+		##Need to think more about how to implment something like this
+		#parser.add_argument('--http-proxy', metavar='PROXYIP', type=str, dest='http_proxy', help="HTTP proxy info", action=proxyAction)
+		#parser.add_argument('--https-proxy', metavar='PROXYIP', type=str, dest='https_proxy', help="HTTPS proxy info", action=proxyAction)
+		parser.add_argument('--getcomm', metavar='filename', type=str, dest='commentFileName', help="Fetch Comments for file")
+		parser.add_argument('--mkcomm', metavar='comment', type=str, dest='comment', help="Use with --dir as the filename")
+		parser.add_argument('--mkdir', metavar='FOLDERNAME' , type=str, dest='newFolder', help="Creates New folder on Box")
+		parser.add_argument('--rmdir', metavar='Folder Name', type=str, dest='delFolder', help="Deletes folder on Box")
+		parser.add_argument('--rm', metavar='File Name', type=str, dest='delFile', help="Deleted file on Box")
+		parser.add_argument('-c', metavar='Comment', type=str, dest='strComment', help="String to comment with")
+		parser.add_argument('--dir', metavar='DIR', type=str, dest='ActionDir', help="Box directory to perform action in/on")
+		parser.add_argument('--sync', help="Sync files", action='store_true')
+		parser.add_argument('--version', action='version', version='%(prog)s '+self.version)
+		args = parser.parse_args()
+		self.init_settings()
+		if not args.ActionDir:
+			self.direct=args.ActionDir			
+		if args.lsh:			
+			self.ls()
+		elif args.ls:
+			self.ls_stdout()
+		elif args.setup:
+			self.setup()
+		elif args.dla:			
+			self.download_all(get_all_file_id())
+		elif not args.dlFileName==None:
+			if not self.direct==None:
+				self.update_dom(self.uni_get_name(self.direct, "id", "folder"))
+				self.download_fileid(self.uni_get_name(args.dlFileName, "id", "file"), None)				
+			else:
+				self.download_fileid(self.uni_get_name(ags.dlFileName, "id", "file"), None)
+		elif not args.ulFileName==None:
+			if not self.direct==None:
+				folderid = self.folder_id_from_name(self.direct)
+				self.upload(os.getcwd()+self.separator+args.ulFileName, args.ulFileName, folderid)
+			else:
+				self.upload(os.getcwd()+self.separator+args.ulFileName, args.ulFileName, 0)
+		elif args.sync:			
+			#download all files in root dir
+			self.download_all(self.get_all_file_id())
+			dom = parseString(self.get_folder_list(0))
+			folderList = dom.getElementsByTagName('folder')
+			j=0			
+			tmpbasePath = self.basePath
+			for i in folderList:
+				folderID = i.getElementsByTagName('id')[0].toxml().replace('<id>','').replace('</id>', '')
+				folderName = i.getElementsByTagName('name')[0].toxml().replace('<name>', '').replace('</name>', '')
+				self.basePath = tmpbasePath+self.separator+folderName
+				if j>0:
+					if not os.path.exists(self.basePath):
+						os.makedirs(self.basePath)
+					self.update_dom(folderID)
+					self.download_all(self.get_all_file_id())
+				j=j+1
+				
+		elif not args.comment==None:
+			self.mk_comment(self.uni_get_name(args.comment, "id", "file"), args.strComment)
+		elif not args.commentFileName==None:
+			self.print_comments(self.get_comments(self.uni_get_name(args.commentFileName, "id", "file")))
+		elif not args.mkdir==None:
+			if args.ActionDir==None:
+				self.mk_new_folder(args.mkdir,0)
+			else:
+				self.mk_new_folder(args.mkdir, self.uni_get_name(args.rootDir, "id", "folder"))
+		elif not args.delFolder==None:
+			self.deletefolder(uni_get_name(args.delFolder, "id", "folder"))
+		elif not args.delFile==None:
+			self.deletefile(uni_get_name(args.delFile, "id", "file"))
 		else:
-			upload(os.getcwd()+"/"+values, values, 0)
-		exit(0)
+			print("Try running `boxlinux --help` or `boxlinux --setup`")
+	
+	def setup(self):
+		ticket = self.authenticate()
+		print("Open this link in browser and confirm!")
+		print("https://www.box.com/api/1.0/auth/"+ticket)
+		raw_input("Press enter when approved")
+		self.get_auth_token(ticket)
+		self.saveDir = raw_input("Directory to save files in: "+self.homeDir+"/")
+		self.save_settings()
 		
+	
+	def ls_stdout(self):
+		#get one list for folders and one for files
+		folders = self.get_item_name_list("folder")
+		files = self.get_item_name_list("file")
+		#Not sure that this is the best way to do this; have to think about BASH usability
+		for i in folders:
+			sys.stdout.write(folders[i])
+		for i in files:
+			sys.stdout.write(files[i])
+	
+	def init_settings(self):
+		self.load_settings()
+		global headers
+		headers = {'Authorization' : 'BoxAuth api_key='+self.apikey+'&auth_token='+self.auth_token,}
+		global rootdom
+		rootdom = parseString(self.get_folder_list(0))
+		
+	def authenticate(self):
+		r = requests.get("https://www.box.com/api/1.0/rest?action=get_ticket&api_key="+apikey, proxies=proxies)
+		xml = r.content
+		dom = parseString(xml)
+		ticket = dom.getElementsByTagName('ticket')[0].toxml()
+		ticket = ticket.replace('<ticket>', '').replace("</ticket>","")
+		return ticket
+		
+	def load_settings(self):
+		f = open(self.homeDir+self.separator+'.boxlinux', 'r')
+		jsonData = json.loads(str(f.read()))
+		self.saveDir = jsonData['saveDir']
+		self.auth_token = jsonData['auth_token']
+		f.close()
+		self.basePath = self.homeDir+self.separator+self.saveDir
+		if not os.path.exists(self.basePath):
+			os.makedirs(self.basePath)
+		
+	def save_settings(self):
+		## this becomes problem because it will overwrite the file getting rid of any bitly settings
+		f = open(self.homeDir+self.separator+'.boxlinux', 'w')
+		data = {"auth_token":auth_token, "proxies":proxies, "saveDir": self.saveDir}
+		f.write(json.dumps(data))
+		f.close()
+		
+	def get_auth_token(self, ticket):
+		r = requests.get("https://www.box.com/api/1.0/rest?action=get_auth_token&api_key="+apikey+"&ticket="+ticket, proxies=proxies)
+		xml = r.content
+		dom = parseString(xml)
+		global auth_token
+		auth_token = dom.getElementsByTagName('auth_token')[0].toxml()
+		auth_token = auth_token.replace('<auth_token>', '').replace("</auth_token>", "")
+	
+	def get_folder_list(self, folderid):
+		url = self.build_url("folder", str(folderid)+".xml", None)
+		r = requests.get(url=url, headers=headers, proxies=proxies)
+		return r.content
+	
+	def print_folder_list(self, itemcnt, showshare):
+		itemcnt = int(itemcnt)
+		dom = rootdom
+		i=0
+		bol = True
+		sharebool = False
+		print("FOLDERS:")
+		while bol:
+			try:
+				nameoffolder = dom.getElementsByTagName('folder')[i].getElementsByTagName('name')[0].toxml().replace('<name>', '').replace('</name>', '')
+				folderid = dom.getElementsByTagName('folder')[i].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
+				if showshare==True:
+					dom_of_folder = parseString(get_info_item(folderid, "folder"))
+					try:
+						dom_of_folder.getElementsByTagName('shared-link')[0]
+						sharebool = True
+					except:
+						sharebool = False
+				i=i+1
+				itemcnt = itemcnt+1
+				if showshare==True:
+					print(str(itemcnt)+" "+nameoffolder +" Shared: "+str(sharebool)+" ("+folderid+")")
+				else:
+					print(str(itemcnt)+" "+nameoffolder+" ("+folderid+")")
+	
+			except:
+				bol = False	
+				print("End of Folders! On the "+str(itemcnt))
+		return itemcnt
+	
+	def print_file_list(self, itemcnt, showshare):
+		itemcnt = int(itemcnt)
+		dom = rootdom	
+		print("############################")
+		print("FILES: ")
+		sharebool = False
+		bol = True
+		i=0
+		while bol:
+			try:
+				nameofitem = dom.getElementsByTagName('file')[i].getElementsByTagName('name')[0].toxml().replace('<name>', '').replace('</name>', '')		
+				fileid = dom.getElementsByTagName('file')[i].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
+				if showshare==True:
+					dom_of_file = parseString(get_info_item(fileid, "FILE"))
+					try:
+						dom_of_file.getElementsByTagName('shared-link')[0]
+						sharebool = True
+					except:
+						sharebool = False
+				i+=1
+				itemcnt+=1
+				if showshare==True:
+					print(str(itemcnt)+" "+nameofitem+" Shared: "+str(sharebool)+" ("+fileid+")")
+				else:
+					print(str(itemcnt)+" "+nameofitem+" ("+fileid+")")
+			except:
+				print("End of Items! On the "+str(itemcnt))
+				bol=False
+		
+	def download_fileid(self, fileid, filepath):
+		self.infoprint("Downloading: "+fileid)
+		fileid=str(fileid)
+		url = self.build_url("file", fileid, "content")
+		#print url
+		r = requests.get(url=url, headers=headers, proxies=proxies)
+		filedata = r.content
+		filename = self.uni_get_id(fileid, "name", "file")
+		f = open(self.basePath+self.separator+filename, 'w')
+		f.write(filedata)
+		f.close()
+		
+	def file_id_from_name(self, filename):
+		dom = rootdom
+		for files in dom.getElementsByTagName('file'):
+			testervar = files.getElementsByTagName('name')[0].toxml().replace('<name>','').replace('</name>','')
+			if testervar==filename:
+				return files.getElementsByTagName('id')[0].toxml().replace('<id>','').replace('</id>','')
+				
+	def folder_id_from_name(self, filename):
+		dom = rootdom
+		for files in dom.getElementsByTagName('folder'):
+			testervar = files.getElementsByTagName('name')[0].toxml().replace('<name>','').replace('</name>','')
+			if testervar==filename:
+				return files.getElementsByTagName('id')[0].toxml().replace('<id>','').replace('</id>','')
+	
+	def upload(self, filepath, filename, folderid):
+		self.infoprint("Uploading...")
+		url = self.build_url("file", "content", None)
+		payload = {'filename1': filename, 'folder_id': folderid}
+		try:
+			data = {filename: open(filepath, 'r')}
+		except:
+			self.errprint("File selected is not a file or other error")
+			return
+		r = requests.post(url=url, data=payload, headers=headers, files=data, proxies=proxies)
+		
+	def deletefile(self, fileid):
+		try:
+			sha1sum = get_sha1sum_remote(fileid)
+			varprint("Sha1sum of file to be deleted: "+sha1sum)
+			url = build_url("file", fileid, None)
+			headers_ = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token, 'If-Match': sha1sum}
+			r = requests.delete(url=url, headers=headers_, proxies=proxies)
+			print(r.content)
+		except:
+			infoprint('Something bad happened when deleting file...')
+		
+	def deletefolder(self, folderid):
+		print("Deleting Folder with id "+folderid)
+		url = build_url("folder", str(folderid)+"?recursive=true", None)
+		#varprint(url)
+		r = requests.delete(url=url, headers=headers, proxies=proxies)
+		print(r.content)
+	
+	def get_all_file_id(self):
+		dom = rootdom
+		cnt = int(dom.getElementsByTagName('total-count')[0].toxml().replace('<total-count>', '').replace('</total-count>', ''))
+		fileid={}
+		i=0
+		while i<=cnt:
+			try:
+				fileid[i] = dom.getElementsByTagName('file')[i].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
+				i=i+1
+			except:
+				#errprint("file might not exist")
+				i=cnt+5
+		return fileid
+	
+	def get_sha1sum_remote(fileid):
+		#slight modification of get_file_name or what ever it was 
+		dom = rootdom
+		i=0
+		while i<=len(dom.getElementsByTagName('file')):
+			try:
+				if dom.getElementsByTagName('file')[i].getElementsByTagName('id')[0].toxml().replace('<id>','').replace('</id>','')==fileid:
+					sha1sum = dom.getElementsByTagName('file')[i].getElementsByTagName('etag')[0].toxml().replace('<etag>', '').replace('</etag>', '')
+					return sha1sum
+				else:
+					i=i+1
+			except:
+				return
+	
+	def mk_new_folder(self, foldername, parent_folderid):
+		url = build_url(itemtype, None, None)
+		payload = {'name': ''+foldername+'', 'parent': {'id': parent_folderid}}
+		r = requests.post(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
+		return r.content
+		
+	def get_item_url(self, itemid, itemtype):
+		if itemtype=="folder" or itemtype=="FOLDER":
+			url = build_url(itemtype, itemid, None)
+			payload = {'shared_link': {'access': 'Open'}}
+			r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
+			rtrnval = json.loads(r.content)
+			return [rtrnval['shared_link']['url'], rtrnval['shared_link']['download_url']]
+		elif itemtype=="file" or itemtype=="FILE":
+			url = build_url(itemtype, itemid, None)
+			payload = {'shared_link': {'access':'Open'}}
+			r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
+			rtrnval = json.loads(r.content)
+			return [rtrnval['shared_link']['url'],rtrnval['shared_link']['download_url']]
+	
+	def rm_share_url_item(self, itemid, itemtype):
+		if itemtype=="folder" or itemtype=="FOLDER":
+			url = build_url(itemtype, itemid, None)
+			payload = {'shared_link': None}
+			r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
+			return r.content
+		elif itemtype=="file" or itemtype=="FILE":
+			url = build_url(itemtype, itemid, None)
+			payload = {'shared_link': None}
+			r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
+			return r.content
+			
+		
+	def rename_item(self, newname, itemid, itemtype):
+		if(itemtype=="file" or itemtype=="FILE"):
+			url = build_url(itemtype, itemid, None)
+			payload = {'name': newname}
+			r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
+			return r.content
+		elif(itemtype=="folder" or itemtype=="FOLDER"):
+			url = build_url(itemtype, itemid, None)
+			payload = {'name': newname}
+			r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
+			return r.content
+		
+	def get_item_name_list(self, itemtype):
+		dom = rootdom
+		i=0
+		itemnames={}
+		for itemname in dom.getElementsByTagName(itemtype):
+			itemnames[i] = dom.getElementsByTagName(itemtype)[i].getElementsByTagName('name')[0].toxml().replace('<name>','').replace('</name>','')
+			i+=1
+		return itemnames
+	
+	def uni_get_id(self, itemid, getthis, itemtype):
+		dom = rootdom
+		i=0
+		while i<=len(dom.getElementsByTagName(itemtype)):
+			try:
+				if dom.getElementsByTagName(itemtype)[i].getElementsByTagName('id')[0].toxml().replace('<id>','').replace('</id>','')==itemid:
+					iteminfo = dom.getElementsByTagName(itemtype)[i].getElementsByTagName(getthis)[0].toxml().replace('<'+getthis+'>', '').replace('</'+getthis+'>', '')
+					return iteminfo
+				else:
+					i=i+1
+			except:
+				return
+		return iteminfo	
+		
+	def uni_get_name(self, itemname, getthis, itemtype):
+		dom = rootdom
+		i=0
+		while i<=len(dom.getElementsByTagName(itemtype)):
+			try:
+				if dom.getElementsByTagName(itemtype)[i].getElementsByTagName('name')[0].toxml().replace('<name>','').replace('</name>','')==itemname:
+					iteminfo = dom.getElementsByTagName(itemtype)[i].getElementsByTagName(getthis)[0].toxml().replace('<'+getthis+'>','').replace('</'+getthis+'>','')
+					return iteminfo
+				else:
+					i=i+1
+			except:
+				return
+		return iteminfo
+		
+	def update_dom(self, folderid):
+		self.infoprint("Moving into new Directory")
+		global rootdom
+		rootdom = parseString(self.get_folder_list(folderid))
+				
+	def setup_proxies(self):
+		httpproxy = raw_input("What is the HTTP proxy?: ")
+		httpsproxy = raw_input("What is the HTTPS proxy?: ")
+		global proxies
+		proxies = {"http": httpproxy, "https": httpsproxy,}
+		self.save_settings()
+		
+	def get_comments(self, fileid):
+		## it appears that these come sorted in chronological order...
+		url = self.build_url("file", fileid, "comments")
+		r = requests.get(url=url, headers=headers)
+		return json.loads(r.content)
+		
+	def print_comments(self, comments):
+		i=0
+		for k in comments['entries']:
+			print(comments['entries'][i]['created_by']['name']+" said: "+comments['entries'][i]['message'])
+			i+=1
+	
+	##do not include the s that should be in the URL this will add it
+	##as of now this doesn't do XML... will probably end up changing all the ones that still use XML
+	def build_url(self, itemtype, itemid, getthis):
+		url = "https://api.box.com/2.0/"+str(itemtype)+"s/"
+		if not itemid==None:
+			url+=str(itemid)
+			if not getthis==None:
+				url+="/"+str(getthis)
+		#varprint(url)
+		return url		
+			
+	def mk_comment(self, fileid, comment):
+		url = self.build_url("file", fileid, "comments")
+		payload = {"message": comment}
+		r = requests.post(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
+		
+	def download_all(self, file_list):
+		for i in file_list:
+			#print i
+			self.download_fileid(file_list[i], "")
+	
+	def get_info_item(self, itemid, itemtype):
+		if itemtype=="folder" or itemtype=="FOLDER":
+			url = "https://api.box.com/2.0/folders/"+str(itemid)+".xml"
+			r = requests.get(url=url, headers=headers, proxies=proxies)
+			return r.content
+		elif itemtype=="file" or itemtype=="FILE":
+			url = "https://api.box.com/2.0/files/"+str(itemid)+".xml"
+			r = requests.get(url=url, headers=headers)
+			return r.content
+			
+	def ls(self):
+		self.print_file_list(self.print_folder_list(-1, False), False)
+	
+	def list_items_shared(self):
+		self.print_file_list(self.print_folder_list(-1, True), False)
+	
+	def get_local_files():
+		return os.listdir(os.getcwd())	
+	
+	def errprint(self, printthis):	
+		print("[ERROR] "+printthis)
+		
+	def varprint(self, printthis):
+		print("[VARCHECK] "+str(printthis))
+		
+	def infoprint(self, printthis):
+		print("[INFO] "+str(printthis))
+
 class proxyAction(argparse.Action):
 	def __call__(self, parser, namespace, values, option_string=None):
 		#have to load settings so the auth_token is available
-		init_settings()
 		proxies = {"http": values.http_proxy, "https": values.https_proxy}
 		save_settings()
-		
-class dirAction(argparse.Action):
-	def __call__(self, parser, namespace, values, option_string=None):
-		global direct
-		direct = values
 
-def setup():
-	global saveDir
-	ticket = authenticate()
-	print("Open this link in browser and confirm!")
-	print("https://www.box.com/api/1.0/auth/"+ticket)
-	raw_input("Press enter when approved")
-	get_auth_token(ticket)
-	saveDir = raw_input("Directory to save files in: "+HOME+"/")
-	save_settings()
-	
-
-def ls_stdout():
-	init_settings()
-	#get one list for folders and one for files
-	folders = get_item_name_list("folder")
-	files = get_item_name_list("file")
-	#Not sure that this is the best way to do this; have to think about BASH usability
-	for i in folders:
-		sys.stdout.write(folders[i])
-	for i in files:
-		sys.stdout.write(files[i])
-
-def init_settings():
-	load_settings()
-	global headers
-	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-	global rootdom
-	rootdom = parseString(get_folder_list(0))
-	
-def authenticate():
-	r = requests.get("https://www.box.com/api/1.0/rest?action=get_ticket&api_key="+apikey, proxies=proxies)
-	xml = r.content
-	dom = parseString(xml)
-	ticket = dom.getElementsByTagName('ticket')[0].toxml()
-	ticket = ticket.replace('<ticket>', '').replace("</ticket>","")
-	return ticket
-	
-def load_settings():
-	f = open(HOME+separator+'.boxlinux', 'r')
-	global auth_token
-	global basePath
-	global saveDir
-	jsonData = json.loads(str(f.read()))
-	saveDir = jsonData['saveDir']
-	auth_token = jsonData['auth_token']
-	f.close()
-	#basePath = os.getcwd()+"/"+saveDir
-	basePath = HOME+"/"+saveDir
-	if not os.path.exists(basePath):
-		os.makedirs(basePath)
-	
-def save_settings():
-	## this becomes problem because it will overwrite the file getting rid of any bitly settings
-	f = open(HOME+separator+'.boxlinux', 'w')
-	data = {"auth_token":auth_token, "proxies":proxies, "saveDir": saveDir}
-	f.write(json.dumps(data))
-	f.close()
-	
-def get_auth_token(ticket):
-	r = requests.get("https://www.box.com/api/1.0/rest?action=get_auth_token&api_key="+apikey+"&ticket="+ticket, proxies=proxies)
-	xml = r.content
-	dom = parseString(xml)
-	global auth_token
-	auth_token = dom.getElementsByTagName('auth_token')[0].toxml()
-	auth_token = auth_token.replace('<auth_token>', '').replace("</auth_token>", "")
-
-def get_folder_list(folderid):
-	url = build_url("folder", str(folderid)+".xml", None)
-	r = requests.get(url=url, headers=headers, proxies=proxies)
-	return r.content
-	
-def get_folder_json(folderid):
-	url = build_url("folder", folderid, None)
-	headers = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token,}
-	r = requests.get(url=url, headers=headers, proxies=proxies)
-	return json.loads(r.content)
-
-def print_folder_list(itemcnt, showshare):
-	itemcnt = int(itemcnt)
-	dom = rootdom
-	i=0
-	bol = True
-	sharebool = False
-	print("FOLDERS:")
-	while bol:
-		try:
-			nameoffolder = dom.getElementsByTagName('folder')[i].getElementsByTagName('name')[0].toxml().replace('<name>', '').replace('</name>', '')
-			folderid = dom.getElementsByTagName('folder')[i].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
-			if showshare==True:
-				dom_of_folder = parseString(get_info_item(folderid, "folder"))
-				try:
-					dom_of_folder.getElementsByTagName('shared-link')[0]
-					sharebool = True
-				except:
-					sharebool = False
-			i=i+1
-			itemcnt = itemcnt+1
-			if showshare==True:
-				print(str(itemcnt)+" "+nameoffolder +" Shared: "+str(sharebool)+" ("+folderid+")")
-			else:
-				print(str(itemcnt)+" "+nameoffolder+" ("+folderid+")")
-
-		except:
-			bol = False	
-			print("End of Folders! On the "+str(itemcnt))
-	return itemcnt
-
-def print_file_list(itemcnt, showshare):
-	itemcnt = int(itemcnt)
-	dom = rootdom	
-	print("############################")
-	print("FILES: ")
-	sharebool = False
-	bol = True
-	i=0
-	while bol:
-		try:
-			nameofitem = dom.getElementsByTagName('file')[i].getElementsByTagName('name')[0].toxml().replace('<name>', '').replace('</name>', '')		
-			fileid = dom.getElementsByTagName('file')[i].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
-			if showshare==True:
-				dom_of_file = parseString(get_info_item(fileid, "FILE"))
-				try:
-					dom_of_file.getElementsByTagName('shared-link')[0]
-					sharebool = True
-				except:
-					sharebool = False
-			i+=1
-			itemcnt+=1
-			if showshare==True:
-				print(str(itemcnt)+" "+nameofitem+" Shared: "+str(sharebool)+" ("+fileid+")")
-			else:
-				print(str(itemcnt)+" "+nameofitem+" ("+fileid+")")
-		except:
-			print("End of Items! On the "+str(itemcnt))
-			bol=False
-
-def download(filenumber):
-	fileid = str(get_file_id(filenumber))
-	url = build_url("file", fileid, "content")
-	r = requests.get(url=url, headers=headers, proxies=proxies)
-	infoprint("Downloading...")
-	filerecieved = r.content
-	filename = uni_get_id(fileid, "name", "file")
-	f = open(filename, 'w+')
-	infoprint("Writing...")
-	f.write(filerecieved)
-	f.close()
-	
-def download_fileid(fileid, filepath):
-	infoprint("Downloading: "+fileid)
-	fileid=str(fileid)
-	url = build_url("file", fileid, "content")
-	#print url
-	r = requests.get(url=url, headers=headers, proxies=proxies)
-	filedata = r.content
-	filename = uni_get_id(fileid, "name", "file")
-	f = open(basePath+"/"+filename, 'w')
-	f.write(filedata)
-	f.close()
-	
-def get_file_id(filelistno):
-	dom = rootdom
-	try:
-		fileid = dom.getElementsByTagName('file')[int(filelistno)].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
-	except:
-		errprint("file might not exsist")
-	return fileid
-	
-def file_id_from_name(filename):
-	dom = rootdom
-	for files in dom.getElementsByTagName('file'):
-		testervar = files.getElementsByTagName('name')[0].toxml().replace('<name>','').replace('</name>','')
-		if testervar==filename:
-			return files.getElementsByTagName('id')[0].toxml().replace('<id>','').replace('</id>','')
-			
-def folder_id_from_name(filename):
-	dom = rootdom
-	for files in dom.getElementsByTagName('folder'):
-		testervar = files.getElementsByTagName('name')[0].toxml().replace('<name>','').replace('</name>','')
-		if testervar==filename:
-			return files.getElementsByTagName('id')[0].toxml().replace('<id>','').replace('</id>','')
-
-def upload(filepath, filename, folderid):
-	infoprint("Uploading...")
-	url = build_url("file", "content", None)
-	payload = {'filename1': filename, 'folder_id': folderid}
-	try:
-		data = {filename: open(filepath, 'r')}
-	except:
-		errprint("File selected is not a file or other error")
-		return
-	r = requests.post(url=url, data=payload, headers=headers, files=data, proxies=proxies)
-	
-def deletefile(fileid):
-	try:
-		sha1sum = get_sha1sum_remote(fileid)
-		varprint("Sha1sum of file to be deleted: "+sha1sum)
-		url = build_url("file", fileid, None)
-		headers_ = {'Authorization' : 'BoxAuth api_key='+apikey+'&auth_token='+auth_token, 'If-Match': sha1sum}
-		r = requests.delete(url=url, headers=headers_, proxies=proxies)
-		print(r.content)
-	except:
-		infoprint('Something bad happened when deleting file...')
-	
-def deletefolder(folderid):
-	print("Deleting Folder with id "+folderid)
-	url = build_url("folder", str(folderid)+"?recursive=true", None)
-	#varprint(url)
-	r = requests.delete(url=url, headers=headers, proxies=proxies)
-	print(r.content)
-
-def get_all_file_id():
-	dom = rootdom
-	cnt = int(dom.getElementsByTagName('total-count')[0].toxml().replace('<total-count>', '').replace('</total-count>', ''))
-	fileid={}
-	i=0
-	while i<=cnt:
-		try:
-			fileid[i] = dom.getElementsByTagName('file')[i].getElementsByTagName('id')[0].toxml().replace('<id>', '').replace('</id>', '')
-			i=i+1
-		except:
-			#errprint("file might not exist")
-			i=cnt+5
-	return fileid
-
-def get_sha1sum_remote(fileid):
-	#slight modification of get_file_name or what ever it was 
-	dom = rootdom
-	i=0
-	while i<=len(dom.getElementsByTagName('file')):
-		try:
-			if dom.getElementsByTagName('file')[i].getElementsByTagName('id')[0].toxml().replace('<id>','').replace('</id>','')==fileid:
-				sha1sum = dom.getElementsByTagName('file')[i].getElementsByTagName('etag')[0].toxml().replace('<etag>', '').replace('</etag>', '')
-				return sha1sum
-			else:
-				i=i+1
-		except:
-			return
-
-def mk_new_folder(foldername, parent_folderid):
-	url = build_url(itemtype, None, None)
-	payload = {'name': ''+foldername+'', 'parent': {'id': parent_folderid}}
-	r = requests.post(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
-	return r.content
-	
-def get_item_url(itemid, itemtype):
-	if itemtype=="folder" or itemtype=="FOLDER":
-		url = build_url(itemtype, itemid, None)
-		payload = {'shared_link': {'access': 'Open'}}
-		r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
-		rtrnval = json.loads(r.content)
-		return [rtrnval['shared_link']['url'], rtrnval['shared_link']['download_url']]
-	elif itemtype=="file" or itemtype=="FILE":
-		url = build_url(itemtype, itemid, None)
-		payload = {'shared_link': {'access':'Open'}}
-		r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
-		rtrnval = json.loads(r.content)
-		return [rtrnval['shared_link']['url'],rtrnval['shared_link']['download_url']]
-
-def rm_share_url_item(itemid, itemtype):
-	if itemtype=="folder" or itemtype=="FOLDER":
-		url = build_url(itemtype, itemid, None)
-		payload = {'shared_link': None}
-		r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
-		return r.content
-	elif itemtype=="file" or itemtype=="FILE":
-		url = build_url(itemtype, itemid, None)
-		payload = {'shared_link': None}
-		r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
-		return r.content
-		
-	
-def rename_item(newname, itemid, itemtype):
-	if(itemtype=="file" or itemtype=="FILE"):
-		url = build_url(itemtype, itemid, None)
-		payload = {'name': newname}
-		r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
-		return r.content
-	elif(itemtype=="folder" or itemtype=="FOLDER"):
-		url = build_url(itemtype, itemid, None)
-		payload = {'name': newname}
-		r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
-		return r.content
-	
-def get_item_name_list(itemtype):
-	dom = rootdom
-	i=0
-	itemnames={}
-	for itemname in dom.getElementsByTagName(itemtype):
-		itemnames[i] = dom.getElementsByTagName(itemtype)[i].getElementsByTagName('name')[0].toxml().replace('<name>','').replace('</name>','')
-		i+=1
-	return itemnames
-
-def uni_get_id(itemid, getthis, itemtype):
-	dom = rootdom
-	i=0
-	while i<=len(dom.getElementsByTagName(itemtype)):
-		try:
-			if dom.getElementsByTagName(itemtype)[i].getElementsByTagName('id')[0].toxml().replace('<id>','').replace('</id>','')==itemid:
-				iteminfo = dom.getElementsByTagName(itemtype)[i].getElementsByTagName(getthis)[0].toxml().replace('<'+getthis+'>', '').replace('</'+getthis+'>', '')
-				return iteminfo
-			else:
-				i=i+1
-		except:
-			return
-	return iteminfo	
-	
-def uni_get_name(itemname, getthis, itemtype):
-	dom = rootdom
-	i=0
-	while i<=len(dom.getElementsByTagName(itemtype)):
-		try:
-			if dom.getElementsByTagName(itemtype)[i].getElementsByTagName('name')[0].toxml().replace('<name>','').replace('</name>','')==itemname:
-				iteminfo = dom.getElementsByTagName(itemtype)[i].getElementsByTagName(getthis)[0].toxml().replace('<'+getthis+'>','').replace('</'+getthis+'>','')
-				return iteminfo
-			else:
-				i=i+1
-		except:
-			return
-	return iteminfo
-	
-def update_dom(folderid):
-	global rootdom
-	rootdom = parseString(get_folder_list(folderid))
-			
-def setup_proxies():
-	httpproxy = raw_input("What is the HTTP proxy?: ")
-	httpsproxy = raw_input("What is the HTTPS proxy?: ")
-	global proxies
-	proxies = {"http": httpproxy, "https": httpsproxy,}
-	save_settings()
-	
-def get_comments(fileid):
-	## it appears that these come sorted in chronological order...
-	url = build_url("file", fileid, "comments")
-	r = requests.get(url=url, headers=headers)
-	return json.loads(r.content)
-	
-def print_comments(comments):
-	i=0
-	for k in comments['entries']:
-		print(comments['entries'][i]['created_by']['name']+" said: "+comments['entries'][i]['message'])
-		i+=1
-
-##do not include the s that should be in the URL this will add it
-##as of now this doesn't do XML... will probably end up changing all the ones that still use XML
-def build_url(itemtype, itemid, getthis):
-	url = "https://api.box.com/2.0/"+str(itemtype)+"s/"
-	if not itemid==None:
-		url+=str(itemid)
-		if not getthis==None:
-			url+="/"+str(getthis)
-	#varprint(url)
-	return url
-
-def comments():
-	print_file_list(-1, False)
-	get_comments_on = raw_input("Which file to get comments on?")
-	if in_list(get_comments_on, get_item_name_list("file")):
-		print_comments(get_comments(uni_get_name(get_comments_on, "id", "file")))
-	else:
-		print_comments(get_comments(get_file_id(get_comments_on)))
-		
-		
-def mk_comment(fileid, comment):
-	url = build_url("file", fileid, "comments")
-	payload = {"message": comment}
-	r = requests.post(url=url, data=json.dumps(payload), headers=headers, proxies=proxies)
-	
-def download_all(file_list):
-	for i in file_list:
-		#print i
-		download_fileid(file_list[i], "")
-
-def get_info_item(itemid, itemtype):
-	if itemtype=="folder" or itemtype=="FOLDER":
-		url = "https://api.box.com/2.0/folders/"+str(itemid)+".xml"
-		r = requests.get(url=url, headers=headers, proxies=proxies)
-		return r.content
-	elif itemtype=="file" or itemtype=="FILE":
-		url = "https://api.box.com/2.0/files/"+str(itemid)+".xml"
-		r = requests.get(url=url, headers=headers)
-		return r.content
-		
-def ls():
-	print_file_list(print_folder_list(-1, False), False)
-
-def list_items_shared():
-	print_file_list(print_folder_list(-1, True), False)
-
-def test():
-	print("DEBUG METHOD")
-
-def get_local_files():
-	return os.listdir(os.getcwd())	
-
-#init_settings()
-#print get_file_id(0)
-
-
-def errprint(printthis):	
-	print("[ERROR] "+printthis)
-	
-def varprint(printthis):
-	print("[VARCHECK] "+str(printthis))
-	
-def infoprint(printthis):
-	print("[INFO] "+str(printthis))
-
-def list_items_shared():
-	print_file_list(print_folder_list(0, True), False)
-	
-def foldercraft(path):
-	if not os.path.exists(path):
-		os.makedirs(path)
-	else:
-		print("Folder already exists")
-
-########################################################################
-if __name__ == '__main__':
-	main()
+box = boxlinux()
 
 """
     BoxLinux; Bringing Box services to the Linux desktop
