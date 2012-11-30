@@ -56,7 +56,7 @@ class boxlinux():
 				self.update_dom(self.uni_get_name(self.direct, "id", "folder"))
 				self.download_fileid(self.uni_get_name(args.dlFileName, "id", "file"), None)				
 			else:
-				self.download_fileid(self.uni_get_name(ags.dlFileName, "id", "file"), None)
+				self.download_fileid(self.uni_get_name(args.dlFileName, "id", "file"), None)
 		elif not args.ulFileName==None:
 			if not self.direct==None:
 				folderid = self.folder_id_from_name(self.direct)
@@ -89,7 +89,7 @@ class boxlinux():
 			if args.ActionDir==None:
 				self.mk_new_folder(args.newFolder,0)
 			else:
-				self.mk_new_folder(args.mkdir, self.uni_get_name(args.rootDir, "id", "folder"))
+				self.mk_new_folder(args.mkdir, self.uni_get_name(args.ActionDir, "id", "folder"))
 		elif not args.delFolder==None:
 			self.deletefolder(uni_get_name(args.delFolder, "id", "folder"))
 		elif not args.delFile==None:
