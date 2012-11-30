@@ -85,9 +85,9 @@ class boxlinux():
 			self.mk_comment(self.uni_get_name(args.comment, "id", "file"), args.strComment)
 		elif not args.commentFileName==None:
 			self.print_comments(self.get_comments(self.uni_get_name(args.commentFileName, "id", "file")))
-		elif not args.mkdir==None:
+		elif not args.newFolder==None:
 			if args.ActionDir==None:
-				self.mk_new_folder(args.mkdir,0)
+				self.mk_new_folder(args.newFolder,0)
 			else:
 				self.mk_new_folder(args.mkdir, self.uni_get_name(args.rootDir, "id", "folder"))
 		elif not args.delFolder==None:
