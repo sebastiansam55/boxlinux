@@ -30,8 +30,8 @@ class boxlinux():
 		parser.add_argument('--setup', help="Setup for use", action='store_true')
 		parser.add_argument('-lsh', help="List filenames for human view", action='store_true')
 		parser.add_argument('-ls', help="Print filenames on Box to stdout", action='store_true')
-		parser.add_argument('--http-proxy', metavar='PROXYIP', type=str, dest='http_proxy', help="HTTP proxy info")
-		parser.add_argument('--https-proxy', metavar='PROXYIP', type=str, dest='https_proxy', help="HTTPS proxy info")
+		parser.add_argument('--http-proxy', metavar='USERNAME:PASSWORD@PROXYIP:PORT', type=str, dest='http_proxy', help="HTTP proxy info")
+		parser.add_argument('--https-proxy', metavar='USERNAME:PASSWORD@PROXYIP:PORT', type=str, dest='https_proxy', help="HTTPS proxy info")
 		parser.add_argument('--getcomm', metavar='filename', type=str, dest='commentFileName', help="Fetch Comments for file")
 		parser.add_argument('--mkcomm', metavar='comment', type=str, dest='comment', help="Use with --dir as the filename")
 		parser.add_argument('--mkdir', metavar='FOLDERNAME' , type=str, dest='newFolder', help="Creates New folder on Box")
@@ -411,7 +411,7 @@ class boxlinux():
 	def setup_proxies(self, http_proxy, https_proxy):
 		#httpproxy = raw_input("What is the HTTP proxy?: ")
 		#httpsproxy = raw_input("What is the HTTPS proxy?: ")
-		self.proxies = {"http": http_proxy, "https": https_proxy,}
+		self.proxies = {"http": "http://"+http_proxy, "https": "https://"+https_proxy,}
 		self.save_settings()
 		
 	def get_comments(self, fileid):
