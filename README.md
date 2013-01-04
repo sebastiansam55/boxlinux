@@ -45,7 +45,7 @@ Bringing Box to the Linux desktop
 
 * Upload to other directories (Dependant on --dir being before -u)
 
-* Added syncing!! (use 'boxlinux --sync'!)
+* Added syncing!! (use 'boxlinux --sync'!) Removed with latest updates to Box API :O
 
 ***: Still in the code just no longer supported via command line interaction.
 	
@@ -111,5 +111,3 @@ This documentation is aboslutely atrocious (in my opinion) I mean it looks nice,
 [Bit.ly URL shortening Service] (http://dev.bitly.com/api.html)
 
 [Bit.ly API Key] (http://bitly.com/a/your_api_key)
-
-After gettings used to XML I'm going to change what I did in XML to use JSON.
