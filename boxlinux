@@ -96,7 +96,7 @@ class boxlinux():
 					if not os.path.exists(self.basePath):
 						os.makedirs(self.basePath)					
 					self.update_json(folderID)
-					self.download_all(self.get_all_file_id())	 				
+					self.download_all(self.get_all_file_id( ))	 				
 				
 		elif not args.comment==None:
 			self.mk_comment(self.uni_get_name(args.comment, "id", "file"), args.strComment)
