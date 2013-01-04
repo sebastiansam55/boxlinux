@@ -40,7 +40,7 @@ class boxlinux():
 		parser.add_argument('--rm', metavar='FILENAME', type=str, dest='delFile', help="Deleted file on Box")
 		parser.add_argument('-c', metavar='Comment', type=str, dest='strComment', help="String to comment with")
 		parser.add_argument('--dir', metavar='DIR', type=str, dest='ActionDir', help="Box directory to perform action in/on")
-		#parser.add_argument('--sync', help="Sync files", action='store_true')
+		parser.add_argument('--sync', help="Sync files", action='store_true')
 		parser.add_argument('--version', action='version', version='%(prog)s '+self.version)
 		parser.add_argument('--shrtLink', metavar='FILENAME', type=str, dest='shrtLink', help="Make short link for file")
 #parser.add_argument
@@ -50,7 +50,7 @@ class boxlinux():
 			print("Saving proxies")
 			self.setup_proxies(args.http_proxy, args.https_proxy)
 		try:
-			self.init_settings()
+			self.init_settings()		
 		except:
 			print("Need to setup or resetup settings file!")
 			self.setup()
@@ -82,21 +82,21 @@ class boxlinux():
 				self.upload(os.getcwd()+self.separator+args.ulFileName, args.ulFileName, 0)
 		elif args.sync:			
 			#download all files in root dir
-			#self.download_all(self.get_all_file_id())
-			folderList = self.get_folder_list(0)
-			j=0			
+			self.download_all(self.get_all_file_id())
+			folderList = self.get_folder_list(0)					
 			tmpbasePath = self.basePath
+			##problem here is that they can be either folders or files
 			for item in range(0, self.rootJSON['item_collection']['total_count']):
-				folderID = self.rootJSON['item_collection']['entries'][item]['id']
-				print folderID
-				folderName = self.rootJSON['item_collection']['entries'][item]['id']
-				self.basePath = tmpbasePath+self.separator+folderName
-				if j>0:
+				#print self.rootJSON['item_collection']['entries'][item]['type']
+				if self.rootJSON['item_collection']['entries'][item]['type']=="folder":
+					folderID = self.rootJSON['item_collection']['entries'][item]['id']
+					#print folderID
+					folderName = self.rootJSON['item_collection']['entries'][item]['name']
+					self.basePath = tmpbasePath+self.separator+folderName
 					if not os.path.exists(self.basePath):
-						os.makedirs(self.basePath)
+						os.makedirs(self.basePath)					
 					self.update_json(folderID)
-					self.download_all(self.get_all_file_id())
-				j=j+1
+					self.download_all(self.get_all_file_id())					
 				
 		elif not args.comment==None:
 			self.mk_comment(self.uni_get_name(args.comment, "id", "file"), args.strComment)
@@ -151,11 +151,12 @@ class boxlinux():
 	Calls load settings to load other settings from save file
 	"""
 	def init_settings(self):
-		self.load_settings()
-		global headers
-		headers = {'Authorization' : 'BoxAuth api_key='+self.apikey+'&auth_token='+self.auth_token,}
+		self.load_settings()		
 		self.rootJSON = json.loads(self.get_folder_list(0))
-		#print self.rootJSON
+		try:
+			print("Error encountered! Error was "+self.rootJSON['status'])
+		except:
+			pass	
 		
 	"""
 	
@@ -181,6 +182,8 @@ class boxlinux():
 		self.basePath = self.homeDir+self.separator+self.saveDir
 		if not os.path.exists(self.basePath):
 			os.makedirs(self.basePath)
+		global headers
+		headers = {'Authorization' : 'BoxAuth api_key='+self.apikey+'&auth_token='+self.auth_token,}
 			
 	"""
 	takes nothing
@@ -317,11 +320,21 @@ class boxlinux():
 	def get_all_file_id(self):
 		fileList = self.get_item_list()
 		j=0
-		rtrnList = range(1, fileList['total_count'])
+		numberFiles=0
 		for i in fileList['entries']:
-			if(i['type']=="file"):
-				rtrnList[j] = i['id']
+			if i['type']=="file":
+				numberFiles+=1
+		rtrnList = range(1, numberFiles)
+		for i in fileList['entries']:
+			if(i['type']=="file" ):
+				try:
+					rtrnList[j] = i['id']
+				except:
+					pass
 				j+=1
+			
+				
+				
 		return rtrnList
 	
 	"""
@@ -401,7 +414,8 @@ class boxlinux():
 	"""
 	Shortcut, not really necessary
 	"""
-	def get_item_list(self):	
+	def get_item_list(self):
+		# self.rootJSON	
 		return self.rootJSON['item_collection']
 	"""
 	@param itemid, name of the item to get info about
