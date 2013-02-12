@@ -124,9 +124,19 @@ class boxlinux():
 		ticket = self.authenticate()
 		print("Open this link in browser and confirm!")
 		print("https://www.box.com/api/1.0/auth/"+ticket)
-		raw_input("Press enter when approved")
+		#if major version == 2 
+		#then use "raw_input"
+		#otherwise (>3) use "input"
+		#if they are using python 1... well they have more pressing problems
+		if(sys.version_info[0]==2): 
+			raw_input("Press enter when approved")
+		else:
+			input("Press enter when approved")
 		self.auth_token = self.get_auth_token(ticket)
-		self.saveDir = raw_input("Directory to save files in: "+self.homeDir+"/")
+		if(sys.version_info[0]==2):
+			self.saveDir = raw_input("Directory to save files in: "+self.homeDir+"/")
+		else:
+			self.saveDir = input("Directory to save files in: "+self.homeDir+"/")
 		self.save_settings()
 		
 	
