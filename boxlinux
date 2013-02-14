@@ -49,12 +49,12 @@ class boxlinux():
 		if not args.http_proxy==None and not args.https_proxy==None:
 			print("Saving proxies")
 			self.setup_proxies(args.http_proxy, args.https_proxy)
-		try:
-			self.init_settings()		
-		except:
-			print("Need to setup or resetup settings file!")
-			self.setup()
-			return
+		#try:
+		self.init_settings()		
+		#except:
+		#	print("Need to setup or resetup settings file!")
+		#	self.setup()
+		#	return
 		if not args.ActionDir:
 			#should this also update the JSON?
 			self.direct=args.ActionDir			
@@ -161,8 +161,8 @@ class boxlinux():
 	Calls load settings to load other settings from save file
 	"""
 	def init_settings(self):
-		self.load_settings()		
-		self.rootJSON = json.loads(self.get_folder_list(0))
+		self.load_settings()
+		self.rootJSON = json.loads(self.get_folder_list(0).decode('ascii'))
 		try:
 			print("Error encountered! Error was "+self.rootJSON['status'])
 		except:
