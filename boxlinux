@@ -331,10 +331,10 @@ class boxlinux():
 		fileList = self.get_item_list()
 		j=0
 		numberFiles=0
-		for i in fileList['entries']:
-			if i['type']=="file":
+		for item in fileList['entries']:
+			if item['type']=="file":
 				numberFiles+=1
-		rtrnList = range(1, numberFiles)
+		rtrnList = range(0, numberFiles)
 		for i in fileList['entries']:
 			if(i['type']=="file" ):
 				try:
