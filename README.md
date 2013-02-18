@@ -111,3 +111,6 @@ This documentation is aboslutely atrocious (in my opinion) I mean it looks nice,
 [Bit.ly URL shortening Service] (http://dev.bitly.com/api.html)
 
 [Bit.ly API Key] (http://bitly.com/a/your_api_key)
+
+In order to use the two tester classes included in the repo you have to add them you your sys.path thingy. You can see this by importing sys and running sys.path. I added it as a *hardlink* (I think thats what they're called) to the current
+version of boxlinux and put the link in "/usr/lib/python2.7". That seemed to do it for me, not sure if it will for you or if that is what you're supposed to do, but that's what I did.

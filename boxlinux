@@ -6,6 +6,13 @@ import json
 import requests
 import argparse
 import threading
+import hashlib
+import random
+
+global debug
+debug = False
+global httpbin
+httpbin = False
 
 proxies = {"":"","":""}
 
@@ -14,15 +21,18 @@ class boxlinux():
 
 	def __init__(self):
 		self.apikey = "l7c2il3sxmetf2ielkyxbvc2k4nqqkm4"
+		self.client_id = self.apikey
+		self.client_secret = "eRINJlFQ4aVf1iJ5G477pYKVIUUBJj5a"
 		self.version = "0.1"
 		self.homeDir = os.path.expanduser("~")
-		self.auth_token=None
+		self.access_token=None
+		self.refresh_token=None
 		self.proxies=None
 		self.saveDir=None
 		if(os.name=="nt"):
 			self.separator = "\\"
 		else:
-			self.separator="/"		
+			self.separator="/"	
 		#ArgumentParser setup
 		parser = argparse.ArgumentParser(description="")
 		parser.add_argument('-dl', metavar='filename', type=str, dest='dlFileName', help="Filename to download (Needs --dir if file in different dir)")
@@ -41,20 +51,21 @@ class boxlinux():
 		parser.add_argument('-c', metavar='Comment', type=str, dest='strComment', help="String to comment with")
 		parser.add_argument('--dir', metavar='DIR', type=str, dest='ActionDir', help="Box directory to perform action in/on")
 		parser.add_argument('--sync', help="Sync files", action='store_true')
+		#parser.add_argument('--fullsync', help="Syncs only changed files", action='store_true')
+		#parser.add_argument('--test', help="For quick testing", action='store_true')
 		parser.add_argument('--version', action='version', version='%(prog)s '+self.version)
 		parser.add_argument('--shrtLink', metavar='FILENAME', type=str, dest='shrtLink', help="Make short link for file")
-#parser.add_argument
 		args = parser.parse_args()
 		#print(args)
 		if not args.http_proxy==None and not args.https_proxy==None:
 			print("Saving proxies")
 			self.setup_proxies(args.http_proxy, args.https_proxy)
-		#try:
-		self.init_settings()		
-		#except:
-		#	print("Need to setup or resetup settings file!")
-		#	self.setup()
-		#	return
+		try:
+			self.init_settings()		
+		except:
+			print("Need to setup or resetup settings file!")
+			self.setup()
+			return
 		if not args.ActionDir:
 			#should this also update the JSON?
 			self.direct=args.ActionDir			
@@ -72,8 +83,8 @@ class boxlinux():
 				#self.download_fileid(self.uni_get_name(args.dlFileName, "id", "file"), None)
 				self.downloadThreaded(self.uni_get_name(args.dlFileName, "id", "file"), None)
 			else:
-				#self.download_fileid(self.uni_get_name(args.dlFileName, "id", "file"), None)
-				self.downloadThreaded(self.uni_get_name(args.dlFileName, "id", "file"), None)
+				self.download_fileid(self.uni_get_name(args.dlFileName, "id", "file"), None)
+				#self.downloadThreaded(self.uni_get_name(args.dlFileName, "id", "file"), None)
 		elif not args.ulFileName==None:
 			if not self.direct==None:
 				folderid = self.uni_get_name(self.direct, "id", "folder")
@@ -108,22 +119,32 @@ class boxlinux():
 			else:
 				self.mk_new_folder(args.mkdir, self.uni_get_name(args.ActionDir, "id", "folder"))
 		elif not args.delFolder==None:
-			self.deletefolder(self.uni_get_name(args.delFolder, "id", "folder"))
+			self.rm_folder(self.uni_get_name(args.delFolder, "id", "folder"))
 		elif not args.delFile==None:
-			self.deletefile(self.uni_get_name(args.delFile, "id", "file"))
+			self.rm_file(self.uni_get_name(args.delFile, "id", "file"))
 		elif not args.shrtLink==None:
 			googl = googlShort()
 			#longURL = uni_get_name(args.shrtLink, 
 			#googl.shorten_url(uni_get_name(args.shrtLink, "share
+		elif args.fullsync:
+			currentFiles = os.listdir(self.basePath)
+			if(debug):
+				print(currentFiles)
+			for filename in currentFiles:
+				print(self.get_sha1sum_local(self.basePath+self.separator+filename))
+		elif args.test:
+			print(self.random_string(10))
 		else:
 			print("Try running `boxlinux --help` or `boxlinux --setup`")
 	"""
 	takes nothing, gives user link to visit on box.com and waits for enter to indicate user has authed	
+	the "first leg" of the oauth process FUCK ME
 	"""
 	def setup(self):
 		ticket = self.authenticate()
 		print("Open this link in browser and confirm!")
-		print("https://www.box.com/api/1.0/auth/"+ticket)
+		uniqueId = self.random_string(10)
+		print("https://api.box.com/oauth2/authorize?response_type=code&client_id="+self.client_id+"&redirect_uri=https://ssebastian.koding.com/box/boxset.php&state="+uniqueId)
 		#if major version == 2 
 		#then use "raw_input"
 		#otherwise (>3) use "input"
@@ -132,7 +153,7 @@ class boxlinux():
 			raw_input("Press enter when approved")
 		else:
 			input("Press enter when approved")
-		self.auth_token = self.get_auth_token(ticket)
+		self.get_access_token(uniqueId)
 		if(sys.version_info[0]==2):
 			self.saveDir = raw_input("Directory to save files in: "+self.homeDir+"/")
 		else:
@@ -163,6 +184,9 @@ class boxlinux():
 	def init_settings(self):
 		self.load_settings()
 		self.rootJSON = json.loads(self.get_folder_list(0).decode('ascii'))
+		self.refresh_token_()
+		if(debug):
+			print(self.rootJSON)
 		try:
 			print("Error encountered! Error was "+self.rootJSON['status'])
 		except:
@@ -187,13 +211,16 @@ class boxlinux():
 		f = open(self.homeDir+self.separator+'.boxlinux', 'r')
 		jsonData = json.loads(str(f.read()))
 		self.saveDir = jsonData['saveDir']
-		self.auth_token = jsonData['auth_token']
+		self.access_token = jsonData['access_token']
+		self.refresh_token = jsonData['refresh_token']
 		f.close()
 		self.basePath = self.homeDir+self.separator+self.saveDir
 		if not os.path.exists(self.basePath):
 			os.makedirs(self.basePath)
 		global headers
-		headers = {'Authorization' : 'BoxAuth api_key='+self.apikey+'&auth_token='+self.auth_token,}
+		headers = {'Authorization' : str('Bearer '+self.access_token),}
+		if(debug):
+			print(headers)
 			
 	"""
 	takes nothing
@@ -202,7 +229,7 @@ class boxlinux():
 	def save_settings(self):
 		## this becomes problem because it will overwrite the file getting rid of any bitly settings
 		f = open(self.homeDir+self.separator+'.boxlinux', 'w')
-		data = {"auth_token":self.auth_token, "proxies":self.proxies, "saveDir": self.saveDir}
+		data = {"access_token":self.access_token, "proxies":self.proxies, "saveDir": self.saveDir, "refresh_token":self.refresh_token}
 		f.write(json.dumps(data))
 		f.close()
 		
@@ -210,13 +237,14 @@ class boxlinux():
 	More boring v1.0 authentication stuff, this gets the auth_token used throughout the classes.
 	@return auth_token
 	"""		
-	def get_auth_token(self, ticket):
-		r = requests.get("https://www.box.com/api/1.0/rest?action=get_auth_token&api_key="+self.apikey+"&ticket="+ticket, proxies=self.proxies)
-		xml = r.content
-		dom = parseString(xml)
-		auth_token = dom.getElementsByTagName('auth_token')[0].toxml()
-		auth_token = auth_token.replace('<auth_token>', '').replace("</auth_token>", "")
-		return auth_token
+	def get_access_token(self, uniqueId):
+		temR = requests.get("http://ssebastian.koding.com/box/boxget.php?identifier="+uniqueId)
+		code = temR.content
+		url = "https://api.box.com/oauth2/token"
+		data = {"grant_type":"authorization_code", "code": code, "client_secret": self.client_secret, "client_id": self.client_id}
+		r = requests.post(url = url, data = data)
+		self.process_OAuth_response(r.content)
+		return
 	
 	"""
 	Fetches folder list from box
@@ -225,6 +253,8 @@ class boxlinux():
 	def get_folder_list(self, folderid):
 		url = self.build_url("folder", str(folderid), None)
 		r = requests.get(url=url, headers=headers, proxies=self.proxies)
+		if(debug):
+			print(r.content)
 		return r.content
 	
 	"""
@@ -257,9 +287,13 @@ class boxlinux():
 		self.infoprint("Downloading: "+fileid)
 		fileid=str(fileid)
 		url = self.build_url("file", fileid, "content")
-		#print url
+		if(httpbin):
+			url = "http://httpbin.org/get"
 		r = requests.get(url=url, headers=headers, proxies=self.proxies)
 		filedata = r.content
+		if(debug):
+			print(r)
+			print(filedata)
 		filename = self.uni_get_id(fileid, "name", "file")
 		f = open(self.basePath+self.separator+filename, 'w')
 		f.write(filedata)
@@ -300,12 +334,12 @@ class boxlinux():
 	@param fileid, id of file to delete
 	Deleted file with corresponding fileid on box.com
 	"""
-	def deletefile(self, fileid):
+	def rm_file(self, fileid):
 		try:
 			sha1sum = self.get_sha1sum_remote(fileid)
 		#self.varprint("Sha1sum of file to be deleted: "+sha1sum)
 			url = self.build_url("file", fileid, None)
-			headers_ = {'Authorization' : 'BoxAuth api_key='+self.apikey+'&auth_token='+self.auth_token, 'If-Match': sha1sum}
+			headers_ = {'Authorization' : 'Bearer '+self.access_token, 'If-Match': sha1sum}
 			r = requests.delete(url=url, headers=headers_, proxies=self.proxies)
 			print(r.content)
 		except:
@@ -316,9 +350,9 @@ class boxlinux():
 	Deletes folder with corresponding id
 	Does not delete locally
 	"""
-	def deletefolder(self, folderid):
+	def rm_folder(self, folderid):
 		print("Deleting Folder with id "+folderid)
-		url = build_url("folder", str(folderid)+"?recursive=true", None)
+		url = self.build_url("folder", str(folderid)+"?recursive=true", None)
 		#varprint(url)
 		r = requests.delete(url=url, headers=headers, proxies=self.proxies)
 		print(r.content)
@@ -354,9 +388,11 @@ class boxlinux():
 	"""
 	def get_sha1sum_remote(self, fileid):
 		fileList = self.rootJSON['item_collection']['entries']
+		if(debug):
+			print(self.rootJSON)
 		for item in fileList:
 			if(item['id']==fileid):
-				return item['sha1']
+				return item['sha1']				
 	
 	"""
 	@param foldername, name of new folder
@@ -364,7 +400,7 @@ class boxlinux():
 	@return server response, can be checked for pass/fail
 	"""
 	def mk_new_folder(self, foldername, parent_folderid):
-		url = build_url(itemtype, None, None)
+		url = self.build_url("folder", None, None)
 		payload = {'name': ''+foldername+'', 'parent': {'id': parent_folderid}}
 		r = requests.post(url=url, data=json.dumps(payload), headers=headers, proxies=self.proxies)
 		return r.content
@@ -376,13 +412,13 @@ class boxlinux():
 	"""
 	def get_item_url(self, itemid, itemtype):
 		if itemtype=="folder" or itemtype=="FOLDER":
-			url = build_url(itemtype, itemid, None)
+			url = self.build_url(itemtype, itemid, None)
 			payload = {'shared_link': {'access': 'Open'}}
 			r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=self.proxies)
 			rtrnval = json.loads(r.content)
 			return [rtrnval['shared_link']['url'], rtrnval['shared_link']['download_url']]
 		elif itemtype=="file" or itemtype=="FILE":
-			url = build_url(itemtype, itemid, None)
+			url =self.build_url(itemtype, itemid, None)
 			payload = {'shared_link': {'access':'Open'}}
 			r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=self.proxies)
 			rtrnval = json.loads(r.content)
@@ -394,12 +430,12 @@ class boxlinux():
 	"""
 	def rm_share_url_item(self, itemid, itemtype):
 		if itemtype=="folder" or itemtype=="FOLDER":
-			url = build_url(itemtype, itemid, None)
+			url = self.build_url(itemtype, itemid, None)
 			payload = {'shared_link': None}
 			r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=self.proxies)
 			return r.content
 		elif itemtype=="file" or itemtype=="FILE":
-			url = build_url(itemtype, itemid, None)
+			url = self.build_url(itemtype, itemid, None)
 			payload = {'shared_link': None}
 			r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=self.proxies)
 			return r.content
@@ -411,12 +447,12 @@ class boxlinux():
 	"""
 	def rename_item(self, newname, itemid, itemtype):
 		if(itemtype=="file" or itemtype=="FILE"):
-			url = build_url(itemtype, itemid, None)
+			url = self.build_url(itemtype, itemid, None)
 			payload = {'name': newname}
 			r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=self.proxies)
 			return r.content
 		elif(itemtype=="folder" or itemtype=="FOLDER"):
-			url = build_url(itemtype, itemid, None)
+			url = self.build_url(itemtype, itemid, None)
 			payload = {'name': newname}
 			r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=self.proxies)
 			return r.content
@@ -461,7 +497,8 @@ class boxlinux():
 	def update_json(self, folderid):
 		self.infoprint("Moving into new Directory")
 		self.rootJSON = json.loads(self.get_folder_list(folderid))
-		#print self.rootJSON
+		if(debug):
+			print(self.rootJSON)
 	
 	"""
 	@param http_proxy
@@ -482,6 +519,8 @@ class boxlinux():
 	def get_comments(self, fileid):
 		url = self.build_url("file", fileid, "comments")
 		r = requests.get(url=url, headers=headers)
+		if(debug):
+			print(r.content)
 		return json.loads(r.content)
 	
 	"""
@@ -501,12 +540,15 @@ class boxlinux():
 	@return url
 	"""
 	def build_url(self, itemtype, itemid, getthis):
+		if(debug):
+			print(itemtype, itemid, getthis)
 		url = "https://api.box.com/2.0/"+str(itemtype)+"s/"
 		if not itemid==None:
 			url+=str(itemid)
 			if not getthis==None:
 				url+="/"+str(getthis)
-		#varprint(url)
+		if(debug):
+			self.varprint(url)
 		return url
 		
 	"""
@@ -515,6 +557,8 @@ class boxlinux():
 	"""
 	def mk_comment(self, fileid, comment):
 		url = self.build_url("file", fileid, "comments")
+		if(debug):
+			print(url)
 		payload = {"message": comment}
 		r = requests.post(url=url, data=json.dumps(payload), headers=headers, proxies=self.proxies)
 		
@@ -579,6 +623,67 @@ class boxlinux():
 	"""		
 	def infoprint(self, printthis):
 		print("[INFO] "+str(printthis))
+	
+	"""
+	@param filename takes a full file location
+	"/home/sam/filename" not just "filename"
+	@return sha1sum of given file
+	"""	
+	def get_sha1sum_local(self, filename):
+		#print filename
+		if( not os.path.isdir(filename)):
+			f = open(filename, "r")
+			hasher = hashlib.sha1()
+			hasher.update(f.read())
+			sha1 = hasher.hexdigest()
+			f.close()
+			return sha1
+		else:
+			return
+			
+	def random_string(self, length):
+		output = ''
+		for num in range(length):
+			rand = random.randint(65, 90) #ascii reg chars A-Z
+			output += str(chr(rand))
+		return output
+		
+	def refresh_token_(self):
+		url = "https://api.box.com/oauth2/token"
+		data = {"refresh_token": self.refresh_token, "client_id": self.client_id, "client_secret": self.client_secret, "grant_type": "refresh_token"}
+		r = requests.post(url = url, data = data)
+		if(debug):
+			print(r.content)
+		self.process_OAuth_response(r.content)
+		
+		
+	def process_OAuth_response(self, data):
+		JSON = json.loads(data)
+		self.access_token = JSON['access_token']
+		self.refresh_token = JSON['refresh_token']
+		self.save_settings()
+		self.update_headers()	
+		return
+		
+	def update_headers(self):
+		global headers
+		headers = {'Authorization' : str('Bearer '+self.access_token),}
+		
+	def upload_raw(self, raw, filename, folderid):
+		self.infoprint("Uploading...")
+		url = self.build_url("file", "content", None)
+		payload = {'filename1': filename, 'folder_id': folderid}
+		f = os.tmpfile()
+		f.write(raw)
+		try:
+			data = {filename: f}
+		except:
+			self.errprint("File selected is not a file or other error")
+			return
+		r = requests.post(url=url, data=payload, headers=headers, files=data, proxies=self.proxies)
+		f.close()
+		
+		
 		
 class downloadThread(threading.Thread):
 	"""
@@ -601,6 +706,7 @@ class downloadThread(threading.Thread):
 	def run(self):
 		self.fileID=str(self.fileID)
 		r = requests.get(url=self.url, headers=self.headers, proxies=self.proxies)
+		#r = requests.get(url="http://httpbin.org/get", headers=self.headers, proxies=self.proxies)
 		filedata = r.content
 		f = open(self.basePath+self.separator+self.filename, 'w')
 		f.write(filedata)
@@ -622,7 +728,7 @@ class bitlyShort():
 	"""
 	
 	returns nothing sets all in self
-	"""
+	""" 
 	def load_api_key():
 		self.api_key
 		self.username
@@ -643,6 +749,8 @@ class bitlyShort():
 		#this is quick and dirty, it will break if any changes are made to the bitly API
 		rtrnval = json.loads(json.dumps(rtrnval['data']))
 		return rtrnval['url']
+		
+		
 		
 		
 		
