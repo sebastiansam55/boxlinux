@@ -8,6 +8,10 @@ import argparse
 import threading
 import hashlib
 import random
+import time
+
+import gettext
+gettext.install('boxlinux', './', unicode=1)
 
 global debug
 debug = False
@@ -20,50 +24,53 @@ proxies = {"":"","":""}
 class boxlinux():
 
 	def __init__(self):
+		self.init_time = int(round(time.time() * 1000))
 		self.apikey = "l7c2il3sxmetf2ielkyxbvc2k4nqqkm4"
 		self.client_id = self.apikey
 		self.client_secret = "eRINJlFQ4aVf1iJ5G477pYKVIUUBJj5a"
-		self.version = "0.1"
+		self.version = "0.2"
 		self.homeDir = os.path.expanduser("~")
 		self.access_token=None
 		self.refresh_token=None
 		self.proxies=None
 		self.saveDir=None
+		takesfile = _("filename")
 		if(os.name=="nt"):
 			self.separator = "\\"
 		else:
 			self.separator="/"	
 		#ArgumentParser setup
 		parser = argparse.ArgumentParser(description="")
-		parser.add_argument('-dl', metavar='filename', type=str, dest='dlFileName', help="Filename to download (Needs --dir if file in different dir)")
-		parser.add_argument('-dla', help="Download all files", action='store_true')
-		parser.add_argument('-u', metavar='filename', type=str, dest='ulFileName', help="Filename to upload")
-		parser.add_argument('--setup', help="Setup for use", action='store_true')
-		parser.add_argument('-lsh', help="List filenames for human view", action='store_true')
-		parser.add_argument('-ls', help="Print filenames on Box to stdout", action='store_true')
-		parser.add_argument('--http-proxy', metavar='USERNAME:PASSWORD@PROXYIP:PORT', type=str, dest='http_proxy', help="HTTP proxy info")
-		parser.add_argument('--https-proxy', metavar='USERNAME:PASSWORD@PROXYIP:PORT', type=str, dest='https_proxy', help="HTTPS proxy info")
-		parser.add_argument('--getcomm', metavar='filename', type=str, dest='commentFileName', help="Fetch Comments for file")
-		parser.add_argument('--mkcomm', metavar='comment', type=str, dest='comment', help="Use with --dir as the filename")
-		parser.add_argument('--mkdir', metavar='FOLDERNAME' , type=str, dest='newFolder', help="Creates New folder on Box")
-		parser.add_argument('--rmdir', metavar='Folder Name', type=str, dest='delFolder', help="Deletes folder on Box")
-		parser.add_argument('--rm', metavar='FILENAME', type=str, dest='delFile', help="Deleted file on Box")
-		parser.add_argument('-c', metavar='Comment', type=str, dest='strComment', help="String to comment with")
-		parser.add_argument('--dir', metavar='DIR', type=str, dest='ActionDir', help="Box directory to perform action in/on")
-		parser.add_argument('--sync', help="Sync files", action='store_true')
-		#parser.add_argument('--fullsync', help="Syncs only changed files", action='store_true')
-		#parser.add_argument('--test', help="For quick testing", action='store_true')
+		parser.add_argument('-dl', metavar=takesfile, type=str, dest='dlFileName', help=_("Filename to download (Needs --dir if file in different dir)"))
+		parser.add_argument('-dla', action='store_true',  help=_("Download all files"))
+		parser.add_argument('-u', metavar=takesfile, type=str, dest='ulFileName', help=_("Filename to upload"))
+		parser.add_argument('--setup', action='store_true', help=_("Setup for use"))
+		parser.add_argument('-lsh', action='store_true', help=_("List filenames for human view"))
+		parser.add_argument('-ls', action='store_true', help=_("Print filenames on Box to stdout"))
+		parser.add_argument('--http-proxy', metavar=_('USERNAME:PASSWORD@PROXYIP:PORT'), type=str, dest='http_proxy', help=_("HTTP proxy info"))
+		parser.add_argument('--https-proxy', metavar=_('USERNAME:PASSWORD@PROXYIP:PORT'), type=str, dest='https_proxy', help=_("HTTPS proxy info"))
+		parser.add_argument('--getcomm', metavar=takesfile, type=str, dest='commentFileName', help=_("Fetch Comments for file"))
+		parser.add_argument('--mkcomm', metavar=takesfile, type=str, dest='comment', help=_("Use with --dir as the filename"))
+		parser.add_argument('--mkdir', metavar=_('FOLDERNAME'), type=str, dest='newFolder', help=_("Creates New folder on Box"))
+		parser.add_argument('--rmdir', metavar=_('FOLDERNAME'), type=str, dest='delFolder', help=_("Deletes folder on Box"))
+		parser.add_argument('--rm', metavar=takesfile, type=str, dest='delFile', help=_("Deleted file on Box"))
+		parser.add_argument('-c', metavar=_('Comment'), type=str, dest='strComment', help=_("String to comment with"))
+		parser.add_argument('--dir', metavar=_('DIR'), type=str, dest='ActionDir', help=_("Box directory to perform action in/on"))
+		parser.add_argument('--sync', help=_("Sync files"), action='store_true')
+		if(debug):
+			parser.add_argument('--fullsync', help="Syncs only changed files", action='store_true')
+			parser.add_argument('--test', help="For quick testing", action='store_true')
 		parser.add_argument('--version', action='version', version='%(prog)s '+self.version)
-		parser.add_argument('--shrtLink', metavar='FILENAME', type=str, dest='shrtLink', help="Make short link for file")
+		parser.add_argument('--shrtLink', metavar=takesfile, type=str, dest='shrtLink', help=_("Make short link for file"))
 		args = parser.parse_args()
 		#print(args)
 		if not args.http_proxy==None and not args.https_proxy==None:
-			print("Saving proxies")
+			print(_("Saving proxies"))
 			self.setup_proxies(args.http_proxy, args.https_proxy)
 		try:
 			self.init_settings()		
 		except:
-			print("Need to setup or resetup settings file!")
+			print(_("Need to setup or resetup settings file!"))
 			self.setup()
 			return
 		if not args.ActionDir:
@@ -83,8 +90,8 @@ class boxlinux():
 				#self.download_fileid(self.uni_get_name(args.dlFileName, "id", "file"), None)
 				self.downloadThreaded(self.uni_get_name(args.dlFileName, "id", "file"), None)
 			else:
-				self.download_fileid(self.uni_get_name(args.dlFileName, "id", "file"), None)
-				#self.downloadThreaded(self.uni_get_name(args.dlFileName, "id", "file"), None)
+				#self.download_fileid(self.uni_get_name(args.dlFileName, "id", "file"), None)
+				self.downloadThreaded(self.uni_get_name(args.dlFileName, "id", "file"), None)
 		elif not args.ulFileName==None:
 			if not self.direct==None:
 				folderid = self.uni_get_name(self.direct, "id", "folder")
@@ -124,40 +131,40 @@ class boxlinux():
 			self.rm_file(self.uni_get_name(args.delFile, "id", "file"))
 		elif not args.shrtLink==None:
 			googl = googlShort()
-			#longURL = uni_get_name(args.shrtLink, 
-			#googl.shorten_url(uni_get_name(args.shrtLink, "share
-		elif args.fullsync:
-			currentFiles = os.listdir(self.basePath)
-			if(debug):
-				print(currentFiles)
-			for filename in currentFiles:
-				print(self.get_sha1sum_local(self.basePath+self.separator+filename))
-		elif args.test:
-			print(self.random_string(10))
+			itemID = self.uni_get_name(args.shrtLink, "id", "folder")
+			item_type = "folder"
+			if(itemID == None):
+				itemID = self.uni_get_name(args.shrtLink, "id", "file")
+				item_type = "file"
+			longURL = self.get_item_url(itemID, item_type)
+			print(googl.shorten_url(longURL))
+		#elif args.test:
+		#	print(self.random_string(10))
 		else:
-			print("Try running `boxlinux --help` or `boxlinux --setup`")
+			print(_("Try running `boxlinux --help` or `boxlinux --setup`"))
 	"""
 	takes nothing, gives user link to visit on box.com and waits for enter to indicate user has authed	
-	the "first leg" of the oauth process FUCK ME
+	the "first leg" of the oauth process
 	"""
 	def setup(self):
-		ticket = self.authenticate()
-		print("Open this link in browser and confirm!")
+		print(_("Open this link in browser and confirm!"))
 		uniqueId = self.random_string(10)
 		print("https://api.box.com/oauth2/authorize?response_type=code&client_id="+self.client_id+"&redirect_uri=https://ssebastian.koding.com/box/boxset.php&state="+uniqueId)
 		#if major version == 2 
 		#then use "raw_input"
 		#otherwise (>3) use "input"
 		#if they are using python 1... well they have more pressing problems
+		enter_prompt = _("Press enter when approved")
 		if(sys.version_info[0]==2): 
-			raw_input("Press enter when approved")
+			raw_input(enter_prompt)
 		else:
-			input("Press enter when approved")
+			input(enter_prompt)
 		self.get_access_token(uniqueId)
+		dir_prompt = _("Directory to save files in: ")
 		if(sys.version_info[0]==2):
-			self.saveDir = raw_input("Directory to save files in: "+self.homeDir+"/")
+			self.saveDir = raw_input(dir_prompt+self.homeDir+self.separator)
 		else:
-			self.saveDir = input("Directory to save files in: "+self.homeDir+"/")
+			self.saveDir = input(dir_prompt+self.homeDir+self.separator)
 		self.save_settings()
 		
 	
@@ -184,25 +191,18 @@ class boxlinux():
 	def init_settings(self):
 		self.load_settings()
 		self.rootJSON = json.loads(self.get_folder_list(0).decode('ascii'))
-		self.refresh_token_()
+		if(self.init_time >= (self.last_refresh + (3600*1000))): #adds one hour to the time started if greater then has to refresh
+			self.refresh_token_()
+		elif(self.init_time >= (self.last_refresh + (14*24*60*60*1000))):	
+		#if 14 days have passed since getting new refresh token, have to go through the whole oauth process again
+			print(_("Have to authenticate again! Blame box not me. Can only be \"logged\" in for 14 days at a time"))
+			self.setup()
 		if(debug):
 			print(self.rootJSON)
 		try:
-			print("Error encountered! Error was "+self.rootJSON['status'])
+			print(_("Error encountered! Error was ")+self.rootJSON['status'])
 		except:
 			pass	
-		
-	"""
-	
-	@return ticket
-	"""
-	def authenticate(self):
-		r = requests.get("https://www.box.com/api/1.0/rest?action=get_ticket&api_key="+self.apikey)
-		xml = r.content
-		dom = parseString(xml)
-		ticket = dom.getElementsByTagName('ticket')[0].toxml()
-		ticket = ticket.replace('<ticket>', '').replace("</ticket>","")
-		return ticket
 		
 	"""
 	Loads in settings into self from ~/.boxlinux
@@ -213,6 +213,7 @@ class boxlinux():
 		self.saveDir = jsonData['saveDir']
 		self.access_token = jsonData['access_token']
 		self.refresh_token = jsonData['refresh_token']
+		self.last_refresh = jsonData['last_refresh']
 		f.close()
 		self.basePath = self.homeDir+self.separator+self.saveDir
 		if not os.path.exists(self.basePath):
@@ -229,7 +230,7 @@ class boxlinux():
 	def save_settings(self):
 		## this becomes problem because it will overwrite the file getting rid of any bitly settings
 		f = open(self.homeDir+self.separator+'.boxlinux', 'w')
-		data = {"access_token":self.access_token, "proxies":self.proxies, "saveDir": self.saveDir, "refresh_token":self.refresh_token}
+		data = {"access_token":self.access_token, "proxies":self.proxies, "saveDir": self.saveDir, "refresh_token":self.refresh_token, "last_refresh": int(round(time.time() * 1000))}
 		f.write(json.dumps(data))
 		f.close()
 		
@@ -263,7 +264,7 @@ class boxlinux():
 	"""	
 	def print_folder_list(self):
 		folderList = self.rootJSON['item_collection']['entries']
-		print("Folders##############")
+		print(_("Folders##############"))
 		for i in folderList:
 			if(i['type']=="folder"):
 				print(i['name']+" ID:"+i['id'])				
@@ -273,7 +274,7 @@ class boxlinux():
 	"""
 	def print_file_list(self):
 		fileList = self.rootJSON['item_collection']['entries']
-		print("Files##############")
+		print(_("Files##############"))
 		for i in fileList:
 			if(i['type']=="file"):
 				print(i['name']+" ID:"+i['id'])	
@@ -284,7 +285,7 @@ class boxlinux():
 	Downloads a file based on the fileid
 	"""
 	def download_fileid(self, fileid, filepath):
-		self.infoprint("Downloading: "+fileid)
+		self.infoprint(_("Downloading: ")+fileid)
 		fileid=str(fileid)
 		url = self.build_url("file", fileid, "content")
 		if(httpbin):
@@ -306,7 +307,7 @@ class boxlinux():
 	Meant to use and return the same as download_fileid
 	"""	
 	def downloadThreaded(self, fileid, filepath):
-		self.infoprint("Downloading: "+fileid)
+		self.infoprint(_("Downloading: ")+fileid)
 		fileid = str(fileid)
 		url = self.build_url("file", fileid, "content")
 		dlThread = downloadThread()
@@ -320,13 +321,13 @@ class boxlinux():
 	@param folderid, id of the folder to put the file in, default will probably be zero
 	"""	
 	def upload(self, filepath, filename, folderid):
-		self.infoprint("Uploading...")
+		self.infoprint(_("Uploading..."))
 		url = self.build_url("file", "content", None)
 		payload = {'filename1': filename, 'folder_id': folderid}
 		try:
 			data = {filename: open(filepath, 'r')}
 		except:
-			self.errprint("File selected is not a file or other error")
+			self.errprint(_("File selected is not a file or other error"))
 			return
 		r = requests.post(url=url, data=payload, headers=headers, files=data, proxies=self.proxies)
 	
@@ -343,7 +344,7 @@ class boxlinux():
 			r = requests.delete(url=url, headers=headers_, proxies=self.proxies)
 			print(r.content)
 		except:
-			self.infoprint('Something bad happened when deleting file...')
+			self.infoprint(_('Something bad happened when deleting file...'))
 	
 	"""
 	@param folderid, id of folder to delete
@@ -351,7 +352,7 @@ class boxlinux():
 	Does not delete locally
 	"""
 	def rm_folder(self, folderid):
-		print("Deleting Folder with id "+folderid)
+		print(_("Deleting Folder with id ")+folderid)
 		url = self.build_url("folder", str(folderid)+"?recursive=true", None)
 		#varprint(url)
 		r = requests.delete(url=url, headers=headers, proxies=self.proxies)
@@ -415,14 +416,13 @@ class boxlinux():
 			url = self.build_url(itemtype, itemid, None)
 			payload = {'shared_link': {'access': 'Open'}}
 			r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=self.proxies)
-			rtrnval = json.loads(r.content)
-			return [rtrnval['shared_link']['url'], rtrnval['shared_link']['download_url']]
+			rtrnval = json.loads(r.content)			
 		elif itemtype=="file" or itemtype=="FILE":
 			url =self.build_url(itemtype, itemid, None)
 			payload = {'shared_link': {'access':'Open'}}
 			r = requests.put(url=url, data=json.dumps(payload), headers=headers, proxies=self.proxies)
 			rtrnval = json.loads(r.content)
-			return [rtrnval['shared_link']['url'],rtrnval['shared_link']['download_url']]
+		return [rtrnval['shared_link']['url'], rtrnval['shared_link']['download_url']]
 	"""
 	@param itemid, itemid of item to remove url of
 	@param itemtype, folder or file
@@ -489,13 +489,15 @@ class boxlinux():
 			if(item['name']==itemname and item['type']==itemtype):
 				return item[getthis]
 				
+		return None
+				
 	"""
 	@param folderid, folderid to update JSON to
 	Updates the JSON to a new folder. Used by many different methods. Replaces update_dom
 	More or less how you `cd`
 	"""
 	def update_json(self, folderid):
-		self.infoprint("Moving into new Directory")
+		self.infoprint(_("Moving into new Directory"))
 		self.rootJSON = json.loads(self.get_folder_list(folderid))
 		if(debug):
 			print(self.rootJSON)
@@ -612,17 +614,17 @@ class boxlinux():
 	Should add timestamp
 	"""
 	def errprint(self, printthis):	
-		print("[ERROR] "+printthis)
+		print(_("[ERROR] ")+printthis)
 	"""
 	Shortcut for variable checking (mostly used for testing)
 	"""
 	def varprint(self, printthis):
-		print("[VARCHECK] "+str(printthis))
+		print(_("[VARCHECK] ")+str(printthis))
 	"""
 	Shortcut for printing info
 	"""		
 	def infoprint(self, printthis):
-		print("[INFO] "+str(printthis))
+		print(_("[INFO] ")+str(printthis))
 	
 	"""
 	@param filename takes a full file location
@@ -656,11 +658,18 @@ class boxlinux():
 			print(r.content)
 		self.process_OAuth_response(r.content)
 		
-		
+	"""
+	access token lasts for one hour
+	refresh token lasts for 14 days	
+	"""
 	def process_OAuth_response(self, data):
-		JSON = json.loads(data)
-		self.access_token = JSON['access_token']
-		self.refresh_token = JSON['refresh_token']
+		JSON = json.loads(data)		
+		self.access_token = JSON.get("access_token")
+		self.refresh_token = JSON.get("refresh_token")
+		if((self.access_token == None) and (self.refresh_token == None)):
+			print(_("Access token not found"))
+			print(_("Refresh token not found"))
+			sys.exit(1)
 		self.save_settings()
 		self.update_headers()	
 		return
@@ -670,7 +679,7 @@ class boxlinux():
 		headers = {'Authorization' : str('Bearer '+self.access_token),}
 		
 	def upload_raw(self, raw, filename, folderid):
-		self.infoprint("Uploading...")
+		self.infoprint(_("Uploading..."))
 		url = self.build_url("file", "content", None)
 		payload = {'filename1': filename, 'folder_id': folderid}
 		f = os.tmpfile()
@@ -678,7 +687,7 @@ class boxlinux():
 		try:
 			data = {filename: f}
 		except:
-			self.errprint("File selected is not a file or other error")
+			self.errprint(_("File selected is not a file or other error"))
 			return
 		r = requests.post(url=url, data=payload, headers=headers, files=data, proxies=self.proxies)
 		f.close()
@@ -717,7 +726,7 @@ class googlShort():
 	"""
 	@return goo.gl link. 
 	"""
-	def shorten_url(longURL):
+	def shorten_url(self, longURL):
 		url = "https://www.googleapis.com/urlshortener/v1/url"
 		headers = {'Content-type': 'application/json'}
 		data = {'longUrl': longURL}
