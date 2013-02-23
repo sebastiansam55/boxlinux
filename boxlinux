@@ -176,12 +176,11 @@ class boxlinux():
 	"""	
 	def ls_stdout(self):
 		items = self.get_item_list()
-		i=0
-		for item in items:
-			sys.stdout.write(items['entries'][i]['name'])
-			i+=1
+		if 'entries' in items:
+			for entry in items['entries']:
+				sys.stdout.write(entry['name'] + '\n')
 	
-	
+
 	"""
 	takes nothing
 	Fetches the base JSON for the box.com folder.
