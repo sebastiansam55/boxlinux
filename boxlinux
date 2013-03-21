@@ -87,11 +87,12 @@ class boxlinux():
 		elif not args.dlFileName==None:
 			if not self.direct==None:
 				self.update_json(self.uni_get_name(self.direct, "id", "folder"))
-				#self.download_fileid(self.uni_get_name(args.dlFileName, "id", "file"), None)
-				self.downloadThreaded(self.uni_get_name(args.dlFileName, "id", "file"), None)
+			fileid = self.uni_get_name(args.dlFileName, "id", "file")
+			if not fileid==None:
+				#self.download_fileid(fileid, "id", "file"), None)
+				self.downloadThreaded(fileid, None)
 			else:
-				#self.download_fileid(self.uni_get_name(args.dlFileName, "id", "file"), None)
-				self.downloadThreaded(self.uni_get_name(args.dlFileName, "id", "file"), None)
+				print(_("File not found: ") + args.dlFileName)
 		elif not args.ulFileName==None:
 			if not self.direct==None:
 				folderid = self.uni_get_name(self.direct, "id", "folder")
@@ -176,12 +177,11 @@ class boxlinux():
 	"""	
 	def ls_stdout(self):
 		items = self.get_item_list()
-		i=0
-		for item in items:
-			sys.stdout.write(items['entries'][i]['name'])
-			i+=1
+		if 'entries' in items:
+			for entry in items['entries']:
+				sys.stdout.write(entry['name'] + '\n')
 	
-	
+
 	"""
 	takes nothing
 	Fetches the base JSON for the box.com folder.
