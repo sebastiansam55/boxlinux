@@ -150,7 +150,7 @@ class boxlinux():
 	def setup(self):
 		print(_("Open this link in browser and confirm!"))
 		uniqueId = self.random_string(10)
-		print("https://api.box.com/oauth2/authorize?response_type=code&client_id="+self.client_id+"&redirect_uri=https://ssebastian.koding.com/box/boxset.php&state="+uniqueId)
+		print("https://api.box.com/oauth2/authorize?response_type=code&client_id="+self.client_id+"&redirect_uri=http://boxlinux.uphero.com/boxset.php&state="+uniqueId)
 		#if major version == 2 
 		#then use "raw_input"
 		#otherwise (>3) use "input"
@@ -239,7 +239,7 @@ class boxlinux():
 	@return auth_token
 	"""		
 	def get_access_token(self, uniqueId):
-		temR = requests.get("http://ssebastian.koding.com/box/boxget.php?identifier="+uniqueId)
+		temR = requests.get("http://boxlinux.uphero.com/boxget.php?identifier="+uniqueId)
 		code = temR.content
 		url = "https://api.box.com/oauth2/token"
 		data = {"grant_type":"authorization_code", "code": code, "client_secret": self.client_secret, "client_id": self.client_id}
