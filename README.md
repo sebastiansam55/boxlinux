@@ -92,6 +92,14 @@ of note are `-dl`, `-dla`, `-u`, `-ls`, `-lsh` and `--dir`.
 `-ls` and `-lsh` `-ls` will write out the Folder names to stdout, part of hopefully making this better to write scripts with. `-lsh` will write out the folder and file names in "human" readable format (neither are --dir compatiable, YET!) 
 
 
+## Testing
+
+The main way to test boxlinux is to run it once (set it up) and then run `tester.py`. 
+
+In order to run this you have to add this folder to the PYTHONPATH env variable. 
+
+This can be done by according to [this post on stackoverflow](http://stackoverflow.com/questions/9383014/cant-import-my-own-modules-in-python)
+
 
 
 

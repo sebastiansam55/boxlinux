@@ -34,6 +34,8 @@ class boxlinux():
 		self.refresh_token=None
 		self.proxies=None
 		self.saveDir=None
+		#edit this line if you want to use another hosting for the boxset and boxget files (has to have https! [for the referrer, for the getter it can be whatever])
+		self.baseURL = "vm-0.ssebastian.kd.io/bx/"
 		takesfile = _("filename")
 		if(os.name=="nt"):
 			self.separator = "\\"
@@ -150,7 +152,7 @@ class boxlinux():
 	def setup(self):
 		print(_("Open this link in browser and confirm!"))
 		uniqueId = self.random_string(10)
-		print("https://api.box.com/oauth2/authorize?response_type=code&client_id="+self.client_id+"&redirect_uri=http://boxlinux.uphero.com/boxset.php&state="+uniqueId)
+		print("https://api.box.com/oauth2/authorize?response_type=code&client_id="+self.client_id+"&redirect_uri=https://"+self.baseURL+"boxset.php&state="+uniqueId)
 		#if major version == 2 
 		#then use "raw_input"
 		#otherwise (>3) use "input"
@@ -239,7 +241,7 @@ class boxlinux():
 	@return auth_token
 	"""		
 	def get_access_token(self, uniqueId):
-		temR = requests.get("http://boxlinux.uphero.com/boxget.php?identifier="+uniqueId)
+		temR = requests.get("http://"+self.baseURL+"boxget.php?identifier="+uniqueId)
 		code = temR.content
 		url = "https://api.box.com/oauth2/token"
 		data = {"grant_type":"authorization_code", "code": code, "client_secret": self.client_secret, "client_id": self.client_id}
@@ -663,7 +665,9 @@ class boxlinux():
 	refresh token lasts for 14 days	
 	"""
 	def process_OAuth_response(self, data):
-		JSON = json.loads(data)		
+		if(debug):
+			print(data)
+		JSON = json.loads(data)
 		self.access_token = JSON.get("access_token")
 		self.refresh_token = JSON.get("refresh_token")
 		if((self.access_token == None) and (self.refresh_token == None)):
